@@ -1,2 +1,2 @@
 # goldilocks
-The "not too resolved, not too resolved" top tagger
+The "not too boosted, not too resolved" top tagger
