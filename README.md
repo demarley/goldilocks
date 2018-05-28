@@ -6,6 +6,7 @@ Built for CMS analyses considering a wide pT-range of top quark decays:
 A large-R jet (AK8) is paired with a small-R jet (AK4) to reconstruct the top quark.
 
 The following describes steps necessary to setup the tagger in a CMSSW environment.  
+_The current setup does not use the Producer/Analyzer model, thus porting this to a "Standalone" setup outside of CMSSW should be straightforward_
 
 ## Getting Started
 
