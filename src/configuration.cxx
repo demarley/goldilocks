@@ -108,10 +108,10 @@ void configuration::initialize() {
 
 
     // Get the absolute path to goldilocks for loading
-    char* cma_path = getenv("CYMINIANADIR");
+    char* cma_path = getenv("GOLDILOCKSDIR");
     if (cma_path==NULL){
         cma::WARNING("CONFIG : environment variable " );
-        cma::WARNING("CONFIG :    'CYMINIANADIR' " );
+        cma::WARNING("CONFIG :    'GOLDILOCKSDIR' " );
         cma::WARNING("CONFIG : is not set.  Using PWD to set path." );
         cma::WARNING("CONFIG : This may cause problems submitting batch jobs." );
         cma_path = getenv("PWD");
@@ -185,7 +185,7 @@ void configuration::initialize() {
 
 void configuration::print(){
     // -- Print the configuration
-    std::cout << " ** CyMiniAna ** " << std::endl;
+    std::cout << " ** Goldilocks ** " << std::endl;
     std::cout << " --------------- " << std::endl;
     std::cout << " CONFIGURATION :: Printing configuration " << std::endl;
     std::cout << " " << std::endl;
