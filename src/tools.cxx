@@ -97,27 +97,50 @@ void getListOfKeys( TFile* file, std::vector<std::string> &fileKeys ){
 
     TList* list = file->GetListOfKeys();
     TIter iter(list->MakeIterator());
+
     while(TObject* obj = iter()){
         TKey* key = (TKey*)obj;
         std::string keyname( key->GetName() );
-
-        // Check if this is a directory that contains TTrees
-        try {
-            TDirectory* dir = (TDirectory*)file->Get(keyname.c_str());
-            TList* sublist  = dir->GetListOfKeys();
-            TIter subiter(sublist->MakeIterator());
-            while (TObject* subobj = subiter()){
-                TKey* key = (TKey*)subobj;
-                std::string subkeyname( key->GetName() );
-                fileKeys.push_back(keyname+"/"+subkeyname);
+        std::string classname( key->GetClassName() );
+        if (classname.find("TH1")!=std::string::npos || classname.find("TH2")!=std::string::npos){
+            continue; // just a histogram -- don't keep track of these for now
+        }
+        else{
+            // Check if this is a directory that contains TTrees
+            try {
+                TDirectory* dir = (TDirectory*)file->Get(keyname.c_str());
+                TList* sublist  = dir->GetListOfKeys();
+                TIter subiter(sublist->MakeIterator());
+                while (TObject* subobj = subiter()){
+                    TKey* key = (TKey*)subobj;
+                    std::string subkeyname( key->GetName() );
+                    fileKeys.push_back(keyname+"/"+subkeyname);
+                }
             }
-        }
-        catch (...){
-            fileKeys.push_back(keyname);
-        }
-    }
+            catch (...){
+                fileKeys.push_back(keyname);
+            }
+        } // end else not a histogram
+    } // end while loop
 
     return;
+}
+
+
+std::string setupOutputFile(const std::string& outpath, const std::string& filename){
+    /* Make a new directory, if necessary, and derive the output filename */
+    struct stat dirBuffer;
+    if ( !(stat((outpath).c_str(),&dirBuffer)==0 && S_ISDIR(dirBuffer.st_mode)) ){
+        cma::DEBUG("RUNML : Creating directory for storing output: "+outpath);
+        system( ("mkdir "+outpath).c_str() );  // make the directory so the files are grouped together
+    }
+
+    std::size_t pos   = filename.find_last_of(".");                      // the last ".", i.e., ".root"
+    std::size_t found = filename.find_last_of("/");                      // the last "/"
+    std::string outputFilename = filename.substr(found+1,pos-1-found);   // betwee "/" and "."
+    // ideally, given "/some/path/to/file/diboson_WW.root" this finds "diboson_WW"
+
+    return outputFilename;
 }
 
 

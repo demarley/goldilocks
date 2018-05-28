@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <exception>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "TROOT.h"
 #include "TFile.h"
@@ -40,6 +43,9 @@ namespace cma{
 
     /* Get the list of TTrees in a file */
     void getListOfKeys( TFile* file, std::vector<std::string> &fileKeys );
+
+    /* Generate output filename and new directory */
+    std::string setupOutputFile(const std::string& outpath, const std::string& filename);
 
     /* calculate values for normalizing monte carlo samples */
     void getSampleWeights( std::string metadata_file,

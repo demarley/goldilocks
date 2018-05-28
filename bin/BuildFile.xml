@@ -4,7 +4,7 @@
 <use   name="rootgraphics"/>
 <use   name="root"/>
 
-<bin   name="runML" file="runML.cxx">
+<bin   name="training" file="training.cxx">
 </bin>
 
 

@@ -116,23 +116,6 @@ void histogrammer::initialize( TFile& outputFile, bool doSystWeights ){
         bookHists( m_name+treename );
     }
 
-    // weight systematics
-    if (m_isMC && m_doSystWeights){
-        // In ATLAS these were only necessary for the nominal tree.
-        // Do not need to make them for every systematic variation!
-        for (const auto& syst : m_config->listOfWeightSystematics()){
-            bookHists( m_name+syst );
-        } // end weight systematics
-
-        // vector weight systematics
-        for (const auto& syst : m_config->mapOfWeightVectorSystematics()){
-            for (unsigned int el=0;el<syst.second;++el){
-                std::string weightIndex = std::to_string(el);
-                bookHists( m_name+weightIndex+"_"+syst.first );
-            } // end components of vector
-        } // end vector weight systematics
-    } // end if MC and save weight systematics
-
     return;
 }
 
@@ -266,30 +249,8 @@ void histogrammer::fill( Event& event ){
 
     fill( m_name+treeName, event, event_weight );
 
-    // if there are systematics stored as weights (e.g., b-tagging, pileup, etc.)
-    // the following calls the fill() function with different event weights
-    // to make histograms
-    // In ATLAS, these weights only existed in the 'nominal' tree
-    bool isNominal = m_config->isNominalTree( treeName );
-    if (m_isMC && isNominal && m_doSystWeights){
-        // weight systematics
-        event_weight = 1.0;
-        for (const auto& syst : m_config->listOfWeightSystematics()){
-            event_weight = event.getSystEventWeight( syst );
-            fill( m_name+syst, event, event_weight );
-        } // end weight systematics
-
-        // vector weight systematics
-        event_weight = 1.0;
-        for (const auto& syst : m_config->mapOfWeightVectorSystematics()){
-            for (unsigned int el=0;el<syst.second;++el){
-                event_weight = event.getSystEventWeight( syst.first, el );
-                std::string weightIndex = std::to_string(el);
-
-                fill( m_name+weightIndex+"_"+syst.first, event, event_weight );
-            } // end components of vector
-        } // end vector weight systematics
-    } // end if nominal and doSystWeights
+    // for different event weights, e.g., systematics,
+    // put other calls to fill() here with that change
 
     return;
 }
@@ -306,6 +267,7 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
     std::vector<Ljet> ljets = event.ljets();
     std::vector<Lepton> leptons = event.leptons();
     std::vector<Top> tops = event.ttbar();  // reconstructed ttbar system
+    MET met = event.met();
 
     cma::DEBUG("HISTOGRAMMER : event weight = "+std::to_string(event_weight) );
     int FULL  = m_mapContainment.at("FULL");
@@ -422,9 +384,9 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
 
     // kinematics
     cma::DEBUG("HISTOGRAMMER : Fill kinematics");
-    fill("met_met_"+name, event.met("met"), event_weight);
-    fill("met_phi_"+name, event.met("phi"), event_weight);
-    fill("ht_"+name,      event.HT(),       event_weight);
+    fill("met_met_"+name, met.p4.Pt(),  event_weight);
+    fill("met_phi_"+name, met.p4.Phi(), event_weight);
+    fill("ht_"+name,      event.HT(),   event_weight);
 
     // DNN
     cma::DEBUG("HISTOGRAMMER : Fill DNN");

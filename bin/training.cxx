@@ -36,7 +36,7 @@ Basic steering macro for running goldilocks
 #include "Analysis/goldilocks/interface/configuration.h"
 #include "Analysis/goldilocks/interface/Event.h"
 #include "Analysis/goldilocks/interface/eventSelection.h"
-#include "Analysis/goldilocks/interface/flatTree4ML.h"
+#include "Analysis/goldilocks/interface/miniTree.h"
 #include "Analysis/goldilocks/interface/tools.h"
 #include "Analysis/goldilocks/interface/histogrammer4ML.h"
 
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     bool passEvent(false);                     // event passed selection
 
     // configuration
-    configuration config(argv[1]);                         // configuration file
+    configuration config(argv[1]);             // configuration file
     config.initialize();
 
     int nEvents = config.nEventsToProcess();                      // requested number of events to run
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     unsigned long long firstEvent      = config.firstEvent();     // first event to begin running over
     std::vector<std::string> filenames = config.filesToProcess(); // list of files to process
     std::string selection(config.selection());                    // selection to apply
-    std::string treename(config.treename());
+    std::string treename(config.treename());                      // name of TTree
 
     std::string customFileEnding( config.customFileEnding() );
     if (customFileEnding.length()>0  && customFileEnding.substr(0,1).compare("_")!=0){
@@ -71,8 +71,6 @@ int main(int argc, char** argv) {
     // event selection
     eventSelection evtSel( config );
     evtSel.initialize();
-    unsigned int ncuts = evtSel.numberOfCuts();            // number of cuts in selection
-    std::vector<std::string> cutNames = evtSel.cutNames(); // names of cuts
 
 
     // --------------- //
@@ -80,6 +78,7 @@ int main(int argc, char** argv) {
     // --------------- //
     unsigned int numberOfFiles(filenames.size());
     unsigned int currentFileNumber(0);
+
     cma::INFO("RUNML : *** Starting file loop *** ");
     for (const auto& filename : filenames) {
 
@@ -94,67 +93,40 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        config.setFilename( filename );   // Use the filename to determine primary dataset and information about the sample
-        config.inspectFile( *file );      // Determine information about the input file (metadata)
-        Sample s = config.sample();       // load the Sample struct (xsection,kfactor,etc)
-
-        std::vector<std::string> fileKeys;
-        cma::getListOfKeys(file,fileKeys);      // keep track of ttrees in file
-
-
-        // -- Output file -- //
-        // CMS doesn't use 'mcChannelNumber', need to keep the same file names
-        // therefore, make new directories for the different selections
-        struct stat dirBuffer;
-        std::string outpath = outpathBase+"/"+selection+customFileEnding;
-        if ( !(stat((outpath).c_str(),&dirBuffer)==0 && S_ISDIR(dirBuffer.st_mode)) ){
-            cma::DEBUG("RUNML : Creating directory for storing output: "+outpath);
-            system( ("mkdir "+outpath).c_str() );  // make the directory so the files are grouped together
-        }
-
-        std::size_t pos   = filename.find_last_of(".");     // the last ".", i.e., ".root"
-        std::size_t found = filename.find_last_of("/");     // the last "/"
-        std::string outputFilename = filename.substr(found+1,pos-1-found); // betwee "/" and "."
-        // hopefully this returns: "diboson_WW_361082" given something like:
-        // "/some/path/to/file/diboson_WW_361082.root"
-
-        std::string fullOutputFilename = outpath+"/"+outputFilename+".root";
-        std::unique_ptr<TFile> outputFile(TFile::Open( fullOutputFilename.c_str(), "RECREATE"));
-        cma::INFO("RUNML :   >> Saving to "+fullOutputFilename);
-
-
-        histogrammer4ML histMaker(config,"ML");      // initialize histogrammer
-        histMaker.initialize( *outputFile );
-
-        // -- Cutflow histograms
-        std::map<std::string, TH1D*>  h_cutflows;            // map of cutflow histograms (weights applied)
-        std::map<std::string, TH1D*>  h_cutflows_unweighted; // map of cutflow histograms (raw # of events)
-
-
         // check that the ttree exists in this file before proceeding
+        std::vector<std::string> fileKeys;
+        cma::getListOfKeys(file,fileKeys);
         if (std::find(fileKeys.begin(), fileKeys.end(), treename) == fileKeys.end()){
             cma::INFO("RUNML : TTree "+treename+" is not present in this file, continuing to next TTree");
             continue;
         }
 
-        // -- Cutflow histogram [initialize and label bins]
-        h_cutflows[treename] = new TH1D( (treename+"_cutflow").c_str(),(treename+"_cutflow").c_str(),ncuts+1,0,ncuts+1);
-        h_cutflows_unweighted[treename] = new TH1D( (treename+"_cutflow_unweighted").c_str(),(treename+"_cutflow_unweighted").c_str(),ncuts+1,0,ncuts+1);
 
-        h_cutflows[treename]->GetXaxis()->SetBinLabel(1,"INITIAL");
-        h_cutflows_unweighted[treename]->GetXaxis()->SetBinLabel(1,"INITIAL");
+        config.setFilename( filename );   // Use the filename to determine primary dataset and information about the sample
+        config.inspectFile( *file );      // Determine information about the input file (metadata)
+        Sample s = config.sample();       // load the Sample struct (xsection,kfactor,etc)
 
-        for (unsigned int c=1;c<=ncuts;++c){
-            h_cutflows[treename]->GetXaxis()->SetBinLabel(c+1,cutNames.at(c-1).c_str());
-            h_cutflows_unweighted[treename]->GetXaxis()->SetBinLabel(c+1,cutNames.at(c-1).c_str());
-        }
+
+        // -- Output file -- //
+        // For each event selection, make a new output directory
+        std::string outpath = outpathBase+"/"+selection+customFileEnding;
+
+        std::string outputFilename     = cma::setupOutputFile(outpath,filename);
+        std::string fullOutputFilename = outpath+"/"+outputFilename+".root";
+        std::unique_ptr<TFile> outputFile(TFile::Open( fullOutputFilename.c_str(), "RECREATE"));
+        cma::INFO("RUNML :   >> Saving to "+fullOutputFilename);
+
 
         // -- Load TTree to loop over
         cma::INFO("RUNML :      TTree "+treename);
         TTreeReader myReader(treename.c_str(), file);
 
+        // -- Initialize histograms
+        histogrammer4ML histMaker(config,"ML");
+        histMaker.initialize( *outputFile );
+
         // -- Make new Tree in Root file
-        flatTree4ML miniTTree(config);          // initialize TTree for new file
+        miniTree miniTTree(config);
         miniTTree.initialize( *outputFile );
 
         // -- Number of Entries to Process -- //
@@ -195,7 +167,7 @@ int main(int argc, char** argv) {
 
             // -- Event Selection -- //
             cma::DEBUG("RUNML : Apply event selection");
-            passEvent = evtSel.applySelection(event,*h_cutflows.at( treename.c_str() ),*h_cutflows_unweighted.at( treename.c_str() ));
+            passEvent = evtSel.applySelection(event);
 
             std::vector<Top> tops = event.ttbar();
             if (passEvent && tops.size()>0){

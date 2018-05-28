@@ -33,13 +33,6 @@
 #include "Analysis/goldilocks/interface/deepLearning.h"
 #include "Analysis/goldilocks/interface/ttbarReco.h"
 
-#ifdef __CINT__
-#pragma link C++ class vector<vector<double> >+;
-#pragma link C++ class vector<vector<int> >+;
-#pragma link C++ class vector<vector<float> >+;
-#endif
-
-
 
 // Event Class
 class Event {
@@ -56,7 +49,7 @@ class Event {
     // OR match reco to truth (truth loop, for acceptance studies)
     void matchTruthWithReco();
     // check during looping over truth events, if reco event match is found
-    bool isValidRecoEntry(){ return (m_entry > (long long)-1);}
+    bool isValidRecoEntry() const {return (m_entry > (long long)-1);}
 
     // Execute the event (load information and setup objects)
     virtual void execute(Long64_t entry);
@@ -72,25 +65,23 @@ class Event {
     void initialize_kinematics();
     void initialize_truth();
 
-    virtual double getSystEventWeight(const std::string &syst, const int weightIndex=-1);
-
     // Clear stuff;
     virtual void finalize();
     virtual void clear();
 
     // Get physics object(s) information
-    std::vector<Lepton> leptons() {return m_leptons;}
-    std::vector<Neutrino> neutrinos() {return m_neutrinos;}
-    std::vector<Ljet> ljets() {return m_ljets;}
-    std::vector<Ljet> ljetsPUPPI() {return m_ljetsPUPPI;}
-    std::vector<Jet> jets() {return m_jets;}
+    std::vector<Lepton> leptons() const {return m_leptons;}
+    std::vector<Neutrino> neutrinos() const {return m_neutrinos;}
+    std::vector<Ljet> ljets() const {return m_ljets;}
+    std::vector<Ljet> ljetsPUPPI() const {return m_ljetsPUPPI;}
+    std::vector<Jet> jets() const {return m_jets;}
+    MET met() const {return m_met;}
 
     virtual std::vector<int> btag_jets(const std::string &wkpt);
-    virtual std::vector<int> btag_jets() {return m_btag_jets_default;}  // using configured b-tag WP
+    virtual std::vector<int> btag_jets() const {return m_btag_jets_default;}  // using configured b-tag WP
 
     virtual float HT() {return m_HT;}
     virtual float ST() {return m_ST;}
-    virtual float met( const std::string& met_name );
 
     // Get truth physics information 
     std::vector<Lepton> truth_leptons() {return m_truth_leptons;}
@@ -101,11 +92,9 @@ class Event {
     TruthTop m_truth_antitop;
 
     // metadata
-//    virtual unsigned long long eventNumber();
-//    virtual unsigned int runNumber();
     long long entry() {return m_entry;}
-    virtual float eventNumber();
-    virtual float runNumber();
+    virtual float eventNumber();              // not 'unsigned long long'
+    virtual float runNumber();                // not 'unsigned int'
     virtual int lumiblock();
     virtual float xsection() {return m_xsection;}
     virtual float kfactor()  {return m_kfactor;}
@@ -124,19 +113,14 @@ class Event {
     void deepLearningPrediction(Top& top);
 
     // Get weights
-    virtual float nominal_weight() {return m_nominal_weight;}
-    float weight_mc() {return 1.0;}
-    float truth_weight_mc() {return 1.0;}
-    float weight_jvt() {return 1.0;}
-    float weight_pileup() {return 1.0;}
-    float weight_lept_eff() {return 1.0;}
-    float weight_btag() {return m_weight_btag_default;}
-    float weight_btag(const std::string &wkpt);
-
-    // Get weight systematics
-    virtual std::map<std::string,float > weightSystematicsFloats();
-    virtual std::map<std::string,std::vector<float> > weightSystematicsVectorFloats();
-    virtual std::vector<std::string> listOfWeightSystematics() {return m_listOfWeightSystematics;}
+    virtual float nominal_weight() const {return m_nominal_weight;}
+    float weight_mc() const {return 1.0;}
+    float truth_weight_mc() const {return 1.0;}
+    float weight_jvt() const {return 1.0;}
+    float weight_pileup() const {return 1.0;}
+    float weight_lept_eff() const {return 1.0;}
+    float weight_btag() const {return 1.0;}       //m_weight_btag_default;}
+    //float weight_btag(const std::string &wkpt);
 
   protected:
 
@@ -172,6 +156,7 @@ class Event {
     std::vector<Ljet> m_ljets;
     std::vector<Ljet> m_ljetsPUPPI;
     std::vector<Jet>  m_jets;
+    MET m_met;
 
     // truth physics object information
     std::vector<Lepton> m_truth_leptons;
@@ -191,8 +176,6 @@ class Event {
 
     float m_HT;
     float m_ST;
-    float m_met_met;
-    float m_met_phi;
 
     lwt::LightweightNeuralNetwork* m_lwnn;
     std::map<std::string, double> m_dnnInputs;   // values for inputs to the DNN
@@ -233,7 +216,7 @@ class Event {
     TTreeReaderValue<double> * m_dnn_score;
 
     TTreeReaderValue<double> * m_avg_npv;
-    TTreeReaderValue<double> * m_calomet;
+    TTreeReaderValue<double> * m_calometmet;
     TTreeReaderValue<double> * m_calometphi;
     TTreeReaderValue<double> * m_dPhi0_CUT;
     TTreeReaderValue<double> * m_dPhi1_CUT;
@@ -242,8 +225,8 @@ class Event {
     TTreeReaderValue<double> * m_genHT;
     TTreeReaderValue<double> * m_genmet;
     TTreeReaderValue<double> * m_genmetphi;
-    TTreeReaderValue<double> * m_ht;
-    TTreeReaderValue<double> * m_met;
+    TTreeReaderValue<double> * m_ht_tree;
+    TTreeReaderValue<double> * m_metmet;
     TTreeReaderValue<double> * m_metphi;
     TTreeReaderValue<double> * m_mht;
     TTreeReaderValue<double> * m_mhtphi;

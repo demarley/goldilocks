@@ -31,17 +31,21 @@ class eventSelection{
     virtual ~eventSelection();
 
     // Run once at the start of the job to setup the cuts
-    virtual void initialize();                            // use cut file defined in configuration
-    virtual void initialize(const std::string &cutsfile); // use any cut file desired
+    virtual void initialize();
+    virtual void initialize(const std::string& cutsfile, const std::string& selection);
     virtual void identifySelection();
 
+    // Run for every tree (before the event loop)
+    void setCutflowHistograms(TFile& outputFile);
+
     // Run for every event (in every systematic) that needs saving
-    virtual bool applySelection(Event &event, TH1D &cutflow, TH1D &cutflow_unweighted);
+    virtual bool applySelection(const Event &event);
+    void fillCutflows(double cutflow_bin);  
 
     // External access to information in this class
     virtual void getCutNames();
-    virtual std::vector<std::string> cutNames();     // Return a vector of the cut names (for labeling bins in cutflow histograms)
-    virtual unsigned int numberOfCuts();             // Return the number of cuts (for binning cutflow histograms)
+    virtual std::vector<std::string> cutNames() {return m_cutflowNames;}     // Return a vector of the cut names (for labeling bins in cutflow histograms)
+    virtual unsigned int numberOfCuts() {return m_numberOfCuts;}             // Return the number of cuts (for binning cutflow histograms)
 
   protected:
 
@@ -64,9 +68,13 @@ class eventSelection{
     std::vector<Cut> m_cuts;
 
     // booleans for each selection
-    bool m_deeplearning;
-    bool m_leopard;
-    bool m_example2Selection;
+    bool m_training;
+
+    // cutflow histograms
+    TH1D* m_cutflow;
+    TH1D* m_cutflow_unw;
+
+    float m_nominal_weight;
 };
 
 #endif

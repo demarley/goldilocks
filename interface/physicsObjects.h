@@ -115,6 +115,11 @@ struct Neutrino : CmaBase {
     // neutrino attributes
 };
 
+struct MET : CmaBase{
+    // extra MET attributs
+    float mtw;   // transverse mass of W
+};
+
 
 struct Top {
     // Define a top quark

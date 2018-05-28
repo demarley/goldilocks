@@ -17,16 +17,15 @@ Event::Event( TTreeReader &myReader, configuration &cmaConfig ) :
   m_config(&cmaConfig),
   m_ttree(myReader),
   m_treeName("SetMe"),
-  m_DNN(0.0),
+  m_DNN(-1.0),
   m_useLargeRJets(false),
   m_useJets(false),
   m_useLeptons(false),
   m_useNeutrinos(false),
   m_useTruth(false){
     m_isMC     = m_config->isMC();
-    m_grid     = m_config->isGridFile();             // file directly from original analysis team
-    m_treeName = m_ttree.GetTree()->GetName();       // for systematics
-    m_getDNN   = m_config->getDNN();                 // build DNN
+    m_treeName = m_ttree.GetTree()->GetName();              // for systematics
+    m_getDNN   = m_config->getDNN();                        // build DNN
 
     m_mapContainment = m_config->mapOfPartonContainment();  // containment map (ints and strings)
     m_targetMap      = m_config->mapOfTargetValues();       // map of target values for NN training
@@ -35,6 +34,7 @@ Event::Event( TTreeReader &myReader, configuration &cmaConfig ) :
     m_cMVAv2M = m_config->cMVAv2M();
     m_cMVAv2T = m_config->cMVAv2T();
 
+    // ** LOAD BRANCHES FROM TTREE ** //
     // Event Info
     m_run   = new TTreeReaderValue<unsigned int>(m_ttree,"run");
     m_lumi  = new TTreeReaderValue<unsigned int>(m_ttree,"lumi");
@@ -56,38 +56,15 @@ Event::Event( TTreeReader &myReader, configuration &cmaConfig ) :
     m_BadChargedCandidateFilter = new TTreeReaderValue<unsigned int>(m_ttree,"BadChargedCandidateFilter");
     m_EcalDeadCellTriggerPrimitiveFilter = new TTreeReaderValue<int>(m_ttree,"EcalDeadCellTriggerPrimitiveFilter");
 
-    // Kinematics
-    m_met    = new TTreeReaderValue<double>(m_ttree,"met");
-    m_metphi = new TTreeReaderValue<double>(m_ttree,"metphi");
-    m_calomet    = new TTreeReaderValue<double>(m_ttree,"calomet");
-    m_calometphi = new TTreeReaderValue<double>(m_ttree,"calometphi");
-
     m_PassTrigger  = new TTreeReaderValue<std::vector<int>>(m_ttree,"PassTrigger");
     m_TriggerNames = new TTreeReaderValue<std::vector<std::string>>(m_ttree,"TriggerNames");
     m_TriggerPrescales = new TTreeReaderValue<std::vector<int>>(m_ttree,"TriggerPrescales");
 
-    // Tracks -- not used as of 12 January 2018
-    m_nIsoTrks_CUT = new TTreeReaderValue<int>(m_ttree,"nIsoTrks_CUT");
-    m_forVetoIsoTrksidx = new TTreeReaderValue<std::vector<int>>(m_ttree,"forVetoIsoTrksidx");
-
-    m_trksForIsoVeto_pdgId  = new TTreeReaderValue<std::vector<int>>(m_ttree,"trksForIsoVeto_pdgId");
-    m_trksForIsoVeto_idx    = new TTreeReaderValue<std::vector<int>>(m_ttree,"trksForIsoVeto_idx");
-    m_trksForIsoVetoLVec    = new TTreeReaderValue<std::vector<TLorentzVector>>(m_ttree,"trksForIsoVetoLVec");
-    m_trksForIsoVeto_charge = new TTreeReaderValue<std::vector<double>>(m_ttree,"trksForIsoVeto_charge");
-    m_trksForIsoVeto_dz     = new TTreeReaderValue<std::vector<double>>(m_ttree,"trksForIsoVeto_dz");
-    m_trksForIsoVeto_iso    = new TTreeReaderValue<std::vector<double>>(m_ttree,"trksForIsoVeto_iso");
-    m_trksForIsoVeto_pfActivity = new TTreeReaderValue<std::vector<double>>(m_ttree,"trksForIsoVeto_pfActivity");
-
-    m_loose_nIsoTrks = new TTreeReaderValue<int>(m_ttree,"loose_nIsoTrks");
-    m_loose_isoTrks_pdgId  = new TTreeReaderValue<std::vector<int>>(m_ttree,"loose_isoTrks_pdgId");
-    m_loose_isoTrks_idx    = new TTreeReaderValue<std::vector<int>>(m_ttree,"loose_isoTrks_idx");
-    m_loose_isoTrksLVec    = new TTreeReaderValue<std::vector<TLorentzVector>>(m_ttree,"loose_isoTrksLVec");
-    m_loose_isoTrks_charge = new TTreeReaderValue<std::vector<double>>(m_ttree,"loose_isoTrks_charge");
-    m_loose_isoTrks_dz  = new TTreeReaderValue<std::vector<double>>(m_ttree,"loose_isoTrks_dz");
-    m_loose_isoTrks_iso = new TTreeReaderValue<std::vector<double>>(m_ttree,"loose_isoTrks_iso");
-    m_loose_isoTrks_mtw = new TTreeReaderValue<std::vector<double>>(m_ttree,"loose_isoTrks_mtw");
-    m_loose_isoTrks_pfActivity = new TTreeReaderValue<std::vector<double>>(m_ttree,"loose_isoTrks_pfActivity");
-
+    // Kinematics
+    m_metmet = new TTreeReaderValue<double>(m_ttree,"met");
+    m_metphi = new TTreeReaderValue<double>(m_ttree,"metphi");
+    m_calometmet = new TTreeReaderValue<double>(m_ttree,"calomet");
+    m_calometphi = new TTreeReaderValue<double>(m_ttree,"calometphi");
 
     // JETS
     if (m_config->useLargeRJets()){
@@ -216,7 +193,6 @@ Event::Event( TTreeReader &myReader, configuration &cmaConfig ) :
 
     // TRUTH
     m_useTruth = (m_config->useTruth());
-
     if (m_isMC){
 /*
         m_genjetsLVec = new TTreeReaderValue<std::vector<TLorentzVector>>(m_ttree,"genjetsLVec");
@@ -258,34 +234,7 @@ Event::Event( TTreeReader &myReader, configuration &cmaConfig ) :
         m_dnn_score = new TTreeReaderValue<double>(m_ttree,"dnn_score");
 } // end constructor
 
-
 Event::~Event() {}
-
-
-
-void Event::initialize_eventWeights(){
-    /* Create vectors of the systematics that are weights for the nominal events */
-    std::map<std::string,unsigned int> mapWeightSystematics = m_config->mapOfWeightVectorSystematics();
-
-    m_listOfWeightSystematics = m_config->listOfWeightSystematics();
-
-    m_weightSystematicsFloats.clear();
-    m_weightSystematicsVectorFloats.clear();
-
-    // systematics from the nominal tree that are floats
-    for (const auto& nom_syst : m_listOfWeightSystematics){
-        if (!m_useLeptons && nom_syst.find("leptonSF")!=std::string::npos)
-            continue;
-        m_weightSystematicsFloats[nom_syst] = new TTreeReaderValue<float>(m_ttree,nom_syst.c_str());
-    }
-
-    // systematics from the nominal tree that are vectors
-    for (const auto& syst : mapWeightSystematics)
-        m_weightSystematicsVectorFloats[syst.first] = new TTreeReaderValue<std::vector<float>>(m_ttree,syst.first.c_str());
-
-    return;
-}
-
 
 void Event::clear(){
     /* Clear many of the vectors/maps for each event -- SAFETY PRECAUTION */
@@ -320,14 +269,14 @@ void Event::updateEntry(Long64_t entry){
     cma::DEBUG("EVENT : Update Entry "+std::to_string(entry) );
 
     m_entry = entry;
-    cma::DEBUG("EVENT : Set entry for updating ");
 
-    // make sure the entry exists
-    // when looping over truth events, this condition is not always met
+    // make sure the entry exists/is valid
     if(isValidRecoEntry())
         m_ttree.SetEntry(m_entry);
     else
         cma::ERROR("EVENT : Invalid Reco entry "+std::to_string(m_entry)+"!");
+
+    cma::DEBUG("EVENT : Set entry for updating ");
 
     return;
 }
@@ -382,8 +331,6 @@ void Event::execute(Long64_t entry){
         cma::DEBUG("EVENT : Setup neutrinos ");
     }
 
-
-    // ------------- //
 
     // Ttbar Reconstruction
     m_ttbarRecoTool->execute(m_jets,m_ljets);
@@ -552,7 +499,7 @@ void Event::initialize_jets(){
         if (jet.p4.Pt() < 30 || std::abs( jet.p4.Eta() > 2.4 ) ) continue;
 
         // Other properties
-        jet.bdisc = (*m_recoJetsBtag_0)->at(i);
+        jet.bdisc  = (*m_recoJetsBtag_0)->at(i);
         jet.charge = (*m_recoJetsCharge_0)->at(i);
         jet.true_flavor = (m_isMC) ? (*m_recoJetsFlavor)->at(i) : -1;
         jet.index  = j_idx;
@@ -602,8 +549,8 @@ void Event::initialize_ljets(){
         Ljet ljet;
         ljet.p4 = (*m_ak8JetsLVec)->at(i);
 
-        ljet.isGood = (ljet.p4.Pt()>200. && fabs(ljet.p4.Eta())<2.4 && ljet.p4.M()>10.);  // no softdrop mass available
         // kinematic cuts
+        ljet.isGood = (ljet.p4.Pt()>200. && fabs(ljet.p4.Eta())<2.4 && ljet.p4.M()>10.);  // no softdrop mass available
         if (!ljet.isGood) continue;
 
         ljet.index  = j_idx;
@@ -767,22 +714,22 @@ void Event::initialize_leptons(){
 
     for (unsigned int i=0,size=(**m_nElectrons); i<size; i++){
         Lepton lep;
-        lep.p4 = (*m_elesLVec)->at(i);
+        lep.p4     = (*m_elesLVec)->at(i);
         lep.charge = (*m_elesCharge)->at(0);
+        lep.Iso    = (*m_elesMiniIso)->at(i);
+        lep.isMuon = false;
         lep.isElectron = true;
-        lep.isMuon     = false;
-        lep.Iso        = (*m_elesMiniIso)->at(i);
 
         m_leptons.push_back(lep);
     }
 
     for (unsigned int i=0,size=(**m_nMuons); i<size; i++){
         Lepton lep;
-        lep.p4 = (*m_muonsLVec)->at(i);
+        lep.p4     = (*m_muonsLVec)->at(i);
         lep.charge = (*m_muonsCharge)->at(0);
+        lep.Iso    = (*m_muonsMiniIso)->at(i);
+        lep.isMuon = false;
         lep.isElectron = true;
-        lep.isMuon     = false;
-        lep.Iso        = (*m_muonsMiniIso)->at(i);
 
         m_leptons.push_back(lep);
     }
@@ -800,8 +747,11 @@ void Event::initialize_neutrinos(){
 
 void Event::initialize_kinematics(){
     /* Kinematic variables (HT, ST, MET) */
-    m_met_met = *(*m_met);
-    m_met_phi = *(*m_metphi);
+    float met_met = *(*m_metmet);
+    float met_phi = *(*m_metphi);
+
+    m_met.p4.SetPtEtaPhiM(met_met,0.,met_phi,0.);
+    cma::DEBUG("EVENT : MET = "+std::to_string(m_met.p4.Pt()));
 
     m_HT = 0.0;   // total transverse hadronic energy
     m_ST = 0.0;   // total transverse energy
@@ -811,11 +761,20 @@ void Event::initialize_kinematics(){
 
     m_ST += m_HT;
 
-    m_ST = m_met_met;
+    m_ST = met_met;
     if (m_useLeptons){
         for (const auto& lep : m_leptons)
             m_ST += lep.p4.Pt(); 
     }
+
+    return;
+}
+
+
+void Event::initialize_weights(){
+    /* Event weights */
+    m_nominal_weight = 1.0;
+    if (m_isMC) m_nominal_weight = **m_stored_weight; //**m_evtWeight;
 
     return;
 }
@@ -844,43 +803,6 @@ void Event::getBtaggedJets( Jet& jet ){
 }
 
 
-void Event::initialize_weights(){
-    /* Event weights */
-    m_nominal_weight = 1.0;
-
-    m_weight_btag.clear();
-    if (m_isMC) m_nominal_weight = **m_stored_weight; //**m_evtWeight;
-
-    return;
-}
-
-double Event::getSystEventWeight( const std::string &syst, const int weightIndex ){
-    /* Calculate the event weight given some systematic
-       -- only call for nominal events and systematic weights
-       -- for non-nominal tree systematics, use the nominal event weight
-
-       @param syst          Name of systematic (nominal or some weight systematic)
-       @param weightIndex   Index of btagging SF; default to -1
-    */
-    double syst_event_weight(1.0);
-
-    if (syst.compare("nominal")==0){
-        // nominal event weight
-        syst_event_weight  = m_nominal_weight;
-    }
-    else{
-        // safety to catch something weird -- just return 1.0
-        cma::WARNING("EVENT : Passed systematic variation, "+syst+", to Event::getSystEventWeight() ");
-        cma::WARNING("EVENT : that is inconsistent with the goldilocks options of ");
-        cma::WARNING("EVENT :     nominal, jvt, pileup, leptonSF, and bTagSF. ");
-        cma::WARNING("EVENT : Returning a weight of 1.0. ");
-        syst_event_weight = 1.0;
-    }
-
-    return syst_event_weight;
-}
-
-
 std::vector<int> Event::btag_jets(const std::string &wkpt){
     /* Small-R Jet b-tagging */
     std::string tmp_wkpt(wkpt);
@@ -892,20 +814,6 @@ std::vector<int> Event::btag_jets(const std::string &wkpt){
     return m_btag_jets.at(tmp_wkpt);
 }
 
-float Event::met( const std::string& met_name ){
-    // MET
-    float met_value(0.0);
-    if (met_name.compare("met")==0)
-        met_value = m_met_met;
-    else if (met_name.compare("phi")==0)
-        met_value = m_met_phi;
-    else{
-        cma::WARNING("EVENT : Request for MET variable that is neither 'met' nor 'phi': "+met_name);
-        cma::WARNING("EVENT : Returning 0.0");
-    }
-
-    return met_value;
-}
 
 void Event::deepLearningPrediction(Top& top){
     /* Return map of deep learning values */
@@ -920,44 +828,14 @@ void Event::deepLearningPrediction(Top& top){
     return;
 }
 
-float Event::weight_btag(const std::string &wkpt){
-    std::string tmp_wkpt(wkpt);
-    if(m_weight_btag.find(wkpt) == m_weight_btag.end()){
-        cma::WARNING("EVENT : B-tagging working point "+wkpt+" does not exist");
-        cma::WARNING("EVENT : Return calo-jet b-tag SF for default working point "+m_config->jet_btagWkpt());
-        tmp_wkpt = m_config->jet_btagWkpt();
-    }
-    return m_weight_btag[tmp_wkpt];
-}
-
-// Get weight systematics
-std::map<std::string,float> Event::weightSystematicsFloats(){
-    /* systematics floats */
-    std::map<std::string,float> tmp_weightSystematicsFloats;
-    for (const auto& wsf : m_weightSystematicsFloats)
-        tmp_weightSystematicsFloats[wsf.first] = **wsf.second;
-
-    return tmp_weightSystematicsFloats;
-}
-
-std::map<std::string,std::vector<float> > Event::weightSystematicsVectorFloats(){
-    /* weight systematics stored as vectors */
-    std::map<std::string,std::vector<float> > tmp_weightSystematicsVectorFloats;
-    for (const auto& wsf : m_weightSystematicsVectorFloats)
-        tmp_weightSystematicsVectorFloats[wsf.first] = **wsf.second;
-
-    return tmp_weightSystematicsVectorFloats;
-}
-
 float Event::eventNumber(){ return **m_event;}
 float Event::runNumber(){   return **m_run;}
 int Event::lumiblock(){     return **m_lumi;}
 
 
-
-//
+// -- clean-up
 void Event::finalize(){
-    /* delete variables */
+    /* Delete variables used to access information from TTree */
     cma::DEBUG("EVENT : Finalize() ");
     delete m_BadChargedCandidateFilter;
     delete m_BadPFMuonFilter;
@@ -974,166 +852,149 @@ void Event::finalize(){
     delete m_lumi;
 
     if (m_useLeptons){
-    cma::DEBUG("EVENT : Finalize -- Clear leptons");
-    delete m_elesCharge;
-    delete m_elesFlagMedium;
-    delete m_elesFlagVeto;
-    delete m_elesLVec;
-    delete m_elesMiniIso;
-    delete m_elesMtw;
-    delete m_elesRelIso;
-    delete m_elesisEB;
-    delete m_elespfActivity;
-    //delete m_muMatchedJetIdx;
-    delete m_muonsCharge;
-    delete m_muonsFlagMedium;
-    delete m_muonsFlagTight;
-    delete m_muonsLVec;
-    delete m_muonsMiniIso;
-    delete m_muonsMtw;
-    delete m_muonsRelIso;
-    delete m_muonspfActivity;
-    delete m_n0;
-    delete m_nElectrons;
-    delete m_nElectrons_CUT;
-    delete m_nIsoTrks_CUT;
-    delete m_nMuons;
-    delete m_nMuons_CUT;
-    delete m_W_emuVec;
-    delete m_W_emu_pfActivityVec;
-    delete m_W_tauVec;
-    delete m_W_tau_emuVec;
-    delete m_W_tau_emu_pfActivityVec;
-    delete m_W_tau_nuVec;
-    delete m_W_tau_prongsVec;
-    delete m_W_tau_prongs_pfActivityVec;
+      cma::DEBUG("EVENT : Finalize -- Clear leptons");
+      delete m_elesCharge;
+      delete m_elesFlagMedium;
+      delete m_elesFlagVeto;
+      delete m_elesLVec;
+      delete m_elesMiniIso;
+      delete m_elesMtw;
+      delete m_elesRelIso;
+      delete m_elesisEB;
+      delete m_elespfActivity;
+      //delete m_muMatchedJetIdx;
+      delete m_muonsCharge;
+      delete m_muonsFlagMedium;
+      delete m_muonsFlagTight;
+      delete m_muonsLVec;
+      delete m_muonsMiniIso;
+      delete m_muonsMtw;
+      delete m_muonsRelIso;
+      delete m_muonspfActivity;
+      delete m_n0;
+      delete m_nElectrons;
+      delete m_nElectrons_CUT;
+      delete m_nIsoTrks_CUT;
+      delete m_nMuons;
+      delete m_nMuons_CUT;
+      delete m_W_emuVec;
+      delete m_W_emu_pfActivityVec;
+      delete m_W_tauVec;
+      delete m_W_tau_emuVec;
+      delete m_W_tau_emu_pfActivityVec;
+      delete m_W_tau_nuVec;
+      delete m_W_tau_prongsVec;
+      delete m_W_tau_prongs_pfActivityVec;
     }
 
     cma::DEBUG("EVENT : Finalize -- Clear misc 1");
+    delete m_nm1;
+    delete m_np1;
+    delete m_npv;
     delete m_avg_npv;
-    delete m_calomet;
-    delete m_calometphi;
     delete m_forVetoIsoTrksidx;
     delete m_globalTightHalo2016Filter;
     delete m_goodVerticesFilter;
 
-    delete m_trksForIsoVetoLVec;
-    delete m_trksForIsoVeto_charge;
-    delete m_trksForIsoVeto_dz;
-    delete m_trksForIsoVeto_idx;
-    delete m_trksForIsoVeto_iso;
-    delete m_trksForIsoVeto_pdgId;
-    delete m_trksForIsoVeto_pfActivity;
-    delete m_vtxSize;
-    delete m_loose_isoTrksLVec;
-    delete m_loose_isoTrks_charge;
-    delete m_loose_isoTrks_dz;
-    delete m_loose_isoTrks_idx;
-    delete m_loose_isoTrks_iso;
-    delete m_loose_isoTrks_mtw;
-    delete m_loose_isoTrks_pdgId;
-    delete m_loose_isoTrks_pfActivity;
-    delete m_loose_nIsoTrks;
-
     cma::DEBUG("EVENT : Finalize -- Clear Kinematics");
-    delete m_met;
-    delete m_nm1;
-    delete m_np1;
-    delete m_npv;
+    delete m_metmet;
+    delete m_metphi;
+    delete m_calometmet;
+    delete m_calometphi;
 
     if (m_useLargeRJets){
-    cma::DEBUG("EVENT : Finalize -- Clear Ljets");
-    delete m_puppiSubJetsBdisc;
-    delete m_puppiSubJetsLVec;
-    delete m_puppisoftDropMass;
-    delete m_puppitau1;
-    delete m_puppitau2;
-    delete m_puppitau3;
+      cma::DEBUG("EVENT : Finalize -- Clear Ljets");
+      delete m_puppiSubJetsBdisc;
+      delete m_puppiSubJetsLVec;
+      delete m_puppisoftDropMass;
+      delete m_puppitau1;
+      delete m_puppitau2;
+      delete m_puppitau3;
 /*
-    delete m_softDropMass;
-    delete m_tau1;
-    delete m_tau2;
-    delete m_tau3;
-    delete m_ak8SubJetsBdisc;
-    delete m_ak8SubJetsLVec;
+      delete m_softDropMass;
+      delete m_tau1;
+      delete m_tau2;
+      delete m_tau3;
+      delete m_ak8SubJetsBdisc;
+      delete m_ak8SubJetsLVec;
 */
-    delete m_ak8JetsLVec;
-    delete m_qgAxis2;
-    delete m_qgLikelihood;
-    delete m_qgMult;
-    delete m_qgPtD;
+      delete m_ak8JetsLVec;
+      delete m_qgAxis2;
+      delete m_qgLikelihood;
+      delete m_qgMult;
+      delete m_qgPtD;
     }
 
     if (m_useJets){
-    cma::DEBUG("EVENT : Finalize -- Clear Jets");
-    delete m_jetsLVec;
-    delete m_looseJetID;
-    delete m_NJetsISR;
-    delete m_puppiJetsLVec;
-    delete m_recoJetsBtag_0;
-    delete m_recoJetsCharge_0;
-    delete m_recoJetsFlavor;
-    delete m_recoJetsJecScaleRawToFull;
-    delete m_recoJetsJecUnc;
-    delete m_tightJetID;
-    delete m_tightlepvetoJetID;
+      cma::DEBUG("EVENT : Finalize -- Clear Jets");
+      delete m_jetsLVec;
+      delete m_looseJetID;
+      delete m_NJetsISR;
+      delete m_puppiJetsLVec;
+      delete m_recoJetsBtag_0;
+      delete m_recoJetsCharge_0;
+      delete m_recoJetsFlavor;
+      delete m_recoJetsJecScaleRawToFull;
+      delete m_recoJetsJecUnc;
+      delete m_tightJetID;
+      delete m_tightlepvetoJetID;
 /*
-    delete m_recoJetsBtag_0_LepCleaned;
-    delete m_recoJetsCharge_0_LepCleaned;
-    delete m_recoJetsJecScaleRawToFull_LepCleaned;
-    delete m_jetsLVecLepCleaned;
-    delete m_tightJetID_NoLep;
-    delete m_tightlepvetoJetID_NoLep;
-    delete m_looseJetID_NoLep;
-    delete m_prodJetsNoLep_puppiSubJetsBdisc;
-    delete m_prodJetsNoLep_puppiSubJetsLVec;
-    delete m_prodJetsNoLep_puppisoftDropMass;
-    delete m_prodJetsNoLep_puppitau1;
-    delete m_prodJetsNoLep_puppitau2;
-    delete m_prodJetsNoLep_puppitau3;
-    delete m_prodJetsNoLep_tau1;
-    delete m_prodJetsNoLep_tau2;
-    delete m_prodJetsNoLep_tau3;
-    delete m_prodJetsNoLep_puppiJetsLVec;
-    delete m_prodJetsNoLep_qgAxis2;
-    delete m_prodJetsNoLep_qgLikelihood;
-    delete m_prodJetsNoLep_qgMult;
-    delete m_prodJetsNoLep_qgPtD;
-    delete m_recoJetsJecUncLepCleaned;
-    delete m_recoJetschargedEmEnergyFraction;
-    delete m_recoJetschargedEmEnergyFractionLepCleaned;
-    delete m_recoJetschargedHadronEnergyFraction;
-    delete m_recoJetschargedHadronEnergyFractionLepCleaned;
-    delete m_recoJetsmuonEnergyFraction;
-    delete m_recoJetsmuonEnergyFractionLepCleaned;
-    delete m_recoJetsneutralEmEnergyFraction;
-    delete m_recoJetsneutralEmEnergyFractionLepCleaned;
+      delete m_recoJetsBtag_0_LepCleaned;
+      delete m_recoJetsCharge_0_LepCleaned;
+      delete m_recoJetsJecScaleRawToFull_LepCleaned;
+      delete m_jetsLVecLepCleaned;
+      delete m_tightJetID_NoLep;
+      delete m_tightlepvetoJetID_NoLep;
+      delete m_looseJetID_NoLep;
+      delete m_prodJetsNoLep_puppiSubJetsBdisc;
+      delete m_prodJetsNoLep_puppiSubJetsLVec;
+      delete m_prodJetsNoLep_puppisoftDropMass;
+      delete m_prodJetsNoLep_puppitau1;
+      delete m_prodJetsNoLep_puppitau2;
+      delete m_prodJetsNoLep_puppitau3;
+      delete m_prodJetsNoLep_tau1;
+      delete m_prodJetsNoLep_tau2;
+      delete m_prodJetsNoLep_tau3;
+      delete m_prodJetsNoLep_puppiJetsLVec;
+      delete m_prodJetsNoLep_qgAxis2;
+      delete m_prodJetsNoLep_qgLikelihood;
+      delete m_prodJetsNoLep_qgMult;
+      delete m_prodJetsNoLep_qgPtD;
+      delete m_recoJetsJecUncLepCleaned;
+      delete m_recoJetschargedEmEnergyFraction;
+      delete m_recoJetschargedEmEnergyFractionLepCleaned;
+      delete m_recoJetschargedHadronEnergyFraction;
+      delete m_recoJetschargedHadronEnergyFractionLepCleaned;
+      delete m_recoJetsmuonEnergyFraction;
+      delete m_recoJetsmuonEnergyFractionLepCleaned;
+      delete m_recoJetsneutralEmEnergyFraction;
+      delete m_recoJetsneutralEmEnergyFractionLepCleaned;
 */
     }
 
     if (m_isMC){
-    cma::DEBUG("EVENT : Finalize -- Clear MC");
+      cma::DEBUG("EVENT : Finalize -- Clear MC");
 /*
-    delete m_genjetsLVec;
-    delete m_genHT;
-    delete m_selGenParticle;
-    delete m_evtWeight;
-    delete m_q;
-    delete m_x1;
-    delete m_x2;
-    delete m_ScaleWeightsMiniAOD;
+      delete m_genjetsLVec;
+      delete m_genHT;
+      delete m_selGenParticle;
+      delete m_evtWeight;
+      delete m_q;
+      delete m_x1;
+      delete m_x2;
+      delete m_ScaleWeightsMiniAOD;
 */
-    delete m_selPDGid;
-    delete m_tru_npv;
-    delete m_stored_weight;
-    delete m_genDecayIdxVec;
-    delete m_genDecayLVec;
-    delete m_genDecayMomIdxVec;
-    delete m_genDecayMomRefVec;
-    delete m_genDecayPdgIdVec;
-    delete m_genDecayStrVec;
-    delete m_genmet;
-    delete m_genmetphi;
+      delete m_selPDGid;
+      delete m_tru_npv;
+      delete m_stored_weight;
+      delete m_genDecayIdxVec;
+      delete m_genDecayLVec;
+      delete m_genDecayMomIdxVec;
+      delete m_genDecayMomRefVec;
+      delete m_genDecayPdgIdVec;
+      delete m_genDecayStrVec;
+      delete m_genmet;
+      delete m_genmetphi;
     } // end isMC
 
     return;

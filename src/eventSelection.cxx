@@ -36,8 +36,7 @@ eventSelection::eventSelection(configuration &cmaConfig, const std::string &leve
   m_selection("SetMe"),
   m_cutsfile("SetMe"),
   m_numberOfCuts(0),
-  m_deeplearning(false),
-  m_leopard(false){
+  m_training(false){
     m_cuts.resize(0);
     m_cutflowNames.clear();
 
@@ -50,12 +49,15 @@ eventSelection::~eventSelection() {}
 
 void eventSelection::initialize() {
     /* Build the cuts using the cut file from configuration */
-    initialize( m_cutsfile );
+    initialize( m_cutsfile,m_selection );
     return;
 }
 
-void eventSelection::initialize(const std::string &cutsfile) {
+void eventSelection::initialize(const std::string& cutsfile, const std::string& selection) {
     /* Load cut values using specific name for cutsfile */
+    m_cutsfile  = cutsfile;
+    m_selection = selection;
+
     std::ifstream file = cma::open_file(cutsfile);
 
     // Read one line at a time into the vector of Cut structs:
@@ -66,8 +68,7 @@ void eventSelection::initialize(const std::string &cutsfile) {
         while(std::getline(file, line)){
             std::stringstream  lineStream(line);
             Cut tmp_cut;
-            // read line
-            lineStream >> tmp_cut.name >> tmp_cut.comparison >> tmp_cut.value;
+            lineStream >> tmp_cut.name >> tmp_cut.comparison >> tmp_cut.value;  // read line into struct
             m_cuts.push_back(tmp_cut);
         }
         file.close();
@@ -89,45 +90,65 @@ void eventSelection::initialize(const std::string &cutsfile) {
 
 void eventSelection::identifySelection(){
     /* Set the booleans for applying the selection below */
-    m_deeplearning = m_selection.compare("deeplearning")==0;
-    m_leopard = m_selection.compare("leopard")==0;
+    m_training = m_selection.compare("training")==0;
+    return;
+}
+
+
+void eventSelection::setCutflowHistograms(TFile& outputFile){
+    /* Set the cutflow histograms to use in the framework -- 
+       can modify this function to generate histograms with different names
+       e.g., based on the name of the TTree 
+       Two cutflows:  
+         "cutflow"            event weights
+         "cutflow_unweighted" no event weights -> raw event numbers
+    */
+    outputFile.cd();
+
+    m_cutflow     = new TH1D( (m_selection+"_cutflow").c_str(),(m_selection+"_cutflow").c_str(),m_numberOfCuts+1,0,m_numberOfCuts+1);
+    m_cutflow_unw = new TH1D( (m_selection+"_cutflow_unweighted").c_str(),(m_selection+"_cutflow_unweighted").c_str(),m_numberOfCuts+1,0,m_numberOfCuts+1);
+
+    m_cutflow->GetXaxis()->SetBinLabel(1,"INITIAL");
+    m_cutflow_unw->GetXaxis()->SetBinLabel(1,"INITIAL");
+
+    for (unsigned int c=1;c<=m_numberOfCuts;++c){
+        m_cutflow->GetXaxis()->SetBinLabel(c+1,m_cutflowNames.at(c-1).c_str());
+        m_cutflow_unw->GetXaxis()->SetBinLabel(c+1,m_cutflowNames.at(c-1).c_str());
+    }
 
     return;
 }
 
 
-bool eventSelection::applySelection(Event &event, TH1D &cutflow, TH1D &cutflow_unweighted) {
+bool eventSelection::applySelection(const Event &event) {
     /* Apply cuts 
-
-       Two cutflows:  
-         "cutflow"            event weights
-         "cutflow_unweighted" no event weights -> raw number of events
-
-       Example Cut::
-          if (n_jets==3 && n_ljets<1)  FAIL
-          else :                       PASS & fill cutflows
+       Example Cut:
+          if (n_jets==3 && n_ljets<1)  FAIL (return false)
+          else :                       PASS & fill cutflows (continue to next cut)
     */
-    float nominal_weight  = event.nominal_weight();
+    m_nominal_weight = event.nominal_weight();
     double first_bin(0.5);            // first bin value in cutflow histogram ("INITIAL")
                                       // easily increment by 1 for each cut (don't need to remember bin number)
 
-    // fill cutflow histograms with initial value (before any cuts)
-    cutflow.Fill(first_bin,nominal_weight);      // event weights
-    cutflow_unweighted.Fill( first_bin );        // raw event numbers
-
     if(!event.isValidRecoEntry()) return false;  // check event is valid
 
-    if (m_deeplearning){
-        std::vector<Jet> jets   = event.jets();  // access some event information
-        std::vector<Ljet> ljets = event.ljets();
+    // fill cutflow histograms with initial value (before any cuts)
+    fillCutflows(first_bin);
+
+    // Access event information
+    std::vector<Jet> jets   = event.jets();
+    std::vector<Ljet> ljets = event.ljets();
+
+
+    // Add if/else statements to perform different event selections
+    if (m_training){
+        // Semi-merged top tagger requirements for training samples
 
         // cut0 :: >=1 ljets 
         if ( ljets.size()<1 )                    // check if the event passes the cut!
             return false;
-        else{
-            cutflow.Fill(first_bin+1,nominal_weight);  // fill cutflow
-            cutflow_unweighted.Fill(first_bin+1);
-        }
+        else
+            fillCutflows(first_bin+1);
 
         // cut1 :: >=1 AK4 outside the leading AK8 with (AK4+AK8).M() > 20 GeV 
         unsigned int nAK4(0);
@@ -138,44 +159,20 @@ bool eventSelection::applySelection(Event &event, TH1D &cutflow, TH1D &cutflow_u
 
         if ( nAK4<1 )                                  // check if the event passes the cut!
             return false;
-        else{
-            cutflow.Fill(first_bin+2,nominal_weight);  // fill cutflow
-            cutflow_unweighted.Fill(first_bin+2);
-        }
-    }
-
-    if (m_leopard){
-        // Leptonic Top reconstruction
-
-        std::vector<Jet> jets = event.jets();
-        std::vector<Lepton> leptons = event.leptons();
-
-        // cut0 :: >=1 AK4
-        if (jets.size()<1)
-            return false;
-        else{
-            cutflow.Fill(first_bin+1,nominal_weight);  // fill cutflow
-            cutflow_unweighted.Fill(first_bin+1);
-        }
-
-        // cut1 :: == 1 lepton
-        if (leptons.size() != 1)
-            return false;
-        else{
-            cutflow.Fill(first_bin+2,nominal_weight);  // fill cutflow
-            cutflow_unweighted.Fill(first_bin+2);
-        }
-
-        // cut2 :: MET > 35 GeV
-        if (event.met("met") < 35)
-            return false;
-        else{
-            cutflow.Fill(first_bin+3,nominal_weight);  // fill cutflow
-            cutflow_unweighted.Fill(first_bin+3);
-        }
+        else
+            fillCutflows(first_bin+2);
     }
 
     return true;
+}
+
+
+
+void eventSelection::fillCutflows(double cutflow_bin){
+    /* Fill cutflow histograms with weight at specific bin */
+    m_cutflow->Fill(cutflow_bin,m_nominal_weight);
+    m_cutflow_unw->Fill(cutflow_bin);
+    return;
 }
 
 
@@ -188,14 +185,4 @@ void eventSelection::getCutNames(){
     return;
 }
 
-std::vector<std::string> eventSelection::cutNames(){
-    /* Return a vector of the cut names (for labeling bins in cutflow histograms) */
-    return m_cutflowNames;
-}
-
-unsigned int eventSelection::numberOfCuts(){
-    /* Return the number of cuts (number of bins in cutflow histograms) */
-    return m_numberOfCuts;
-}
-
-// the end
+// THE END //
