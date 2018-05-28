@@ -126,19 +126,8 @@ void getSampleWeights( std::string metadata_file,
     /* Calculate XSection, KFactor, NEvents, and sum of weights (AMI) */
     cma::INFO("TOOLS : Get sample weights (including sum of weights)");
 
-    // get the absolute path (in case of batch job)
-    char* cma_path = getenv("CYMINIANADIR");
-    std::string cma_absPath("");
-    if (cma_path==NULL){
-        cma::WARNING("TOOLS : environment variable 'CYMINIANADIR' is not set." );
-        cma::WARNING("TOOLS : Relative paths will be used " );
-        cma_absPath = "./";
-    }
-    else cma_absPath = cma_path;
-
-
-    std::ifstream in( (cma_absPath+"/"+metadata_file).c_str());
-    if (!in) cma::WARNING("TOOLS : File does not exist: "+cma_absPath+"/"+metadata_file);
+    std::ifstream in( metadata_file.c_str());
+    if (!in) cma::WARNING("TOOLS : File does not exist: "+metadata_file);
 
     std::string line;
     samples.clear();
@@ -289,7 +278,7 @@ void HELP(const std::string& runExecutable){
     /* HELP message (pass 'runExecutable' in case you are running from some 
        script like 'skim', 'run', or a custom macro)
     */
-    std::cout << "\n   ** CyMiniAna ** " << std::endl;
+    std::cout << "\n   ** Goldilocks ** " << std::endl;
     std::cout << "   --------------- " << std::endl;
     std::cout << "   Framework to perform event selection, write-out" << std::endl;
     std::cout << "   a few histograms or efficiencies, and make plots.\n" << std::endl;
