@@ -126,14 +126,7 @@ class DeepLearning(object):
         print " >> Store output in ",self.output_dir
         self.plotter = DeepLearningPlotter()  # class for plotting relevant NN information
         self.plotter.output_dir   = self.output_dir
-        self.plotter.image_format = 'png'
-        if self.dnn_method!='regression':
-            self.plotter.classification = self.dnn_method
-            self.plotter.regression     = False
-        else:
-            self.plotter.classification = False
-            self.plotter.regression     = True
-
+        self.plotter.image_format = 'pdf'
 
         ## -- Adjust model architecture parameters (flexibilty in config file)
         if len(self.nNodes)==1 and self.nHiddenLayers>0:

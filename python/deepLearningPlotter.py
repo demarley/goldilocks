@@ -20,6 +20,7 @@ import os
 import sys
 import json
 import util
+import itertools
 from datetime import date
 import numpy as np
 
@@ -58,11 +59,8 @@ class DeepLearningPlotter(object):
         self.msg_svc      = util.VERBOSE()
         self.filename     = ""
         self.output_dir   = ''
-        self.image_format = 'png'
+        self.image_format = 'pdf'
         self.process_label = ''      # if a single process is used for all training, set this
-
-        self.classification = False  # 'binary','multi',False
-        self.regression     = False  # True or False
 
         self.df = None
         self.targets = []
@@ -75,7 +73,9 @@ class DeepLearningPlotter(object):
         """
         Set parameters of class to make plots
 
-        @param dataframe    The dataframe that contains physics information for training/testing
+        @param dataframe      The dataframe that contains physics information for training/testing
+        @param target_names   The names for different targets to use for making the plots
+        @param target_values  The values for the different targets, e.g., [0,1,2,...]
         """
         self.df = dataframe
 
@@ -84,33 +84,15 @@ class DeepLearningPlotter(object):
         except KeyError:
             self.processlabel = ''
 
-        if self.classification:
-            for i,(n,v) in enumerate(zip(target_names,target_values)):
-                tmp    = Target(n)
-                tmp.df = self.df.loc[self.df['target']==v]
-                tmp.target_value = v
-                tmp.label = self.sample_labels[n].label
-                tmp.color = self.betterColors[i]
-                self.targets.append(tmp)
-        else: # regression
-            try:
-                tmp    = Target(target_names[0])
-                tmp.df = self.df.loc[self.df['target']==target_values[0]]
-                tmp.target_value = target_values[0]
-            except TypeError:
-                tmp    = Target(target_names)
-                tmp.df = self.df.loc[self.df['target']==target_values]
-                tmp.target_value = target_values
+        assert len(target_names)==len(target_values), "Lengths of target names and target values are not the same"
 
-            tmp.label = self.sample_labels[tmp.name].label
+        for i,(n,v) in enumerate(zip(target_names,target_values)):
+            tmp    = Target(n)
+            tmp.df = self.df.loc[self.df['target']==v]
+            tmp.label = self.sample_labels[n].label
             tmp.color = self.betterColors[i]
+            tmp.target_value = v
             self.targets.append(tmp)
-
-        if self.baseline_target is None:
-            for target in self.targets:
-                if target.target_value==0: 
-                    self.baseline_target = target
-                    break
 
         return
 
@@ -118,33 +100,14 @@ class DeepLearningPlotter(object):
     def features(self):
         """
         Plot the features
-        For classification, compare different targets
-        For regression, just plot the features        <- should do data/mc plots instead!
+          For classification, compare different targets
+          For regression, just plot the features        <- should do data/mc plots instead!
         """
         self.msg_svc.INFO("DL : Plotting features.")
 
-        # pick one of the targets to compare against (critical for multi-classification)
-        # -- compare with the 0 target (main background)
-        ratio_denominator = {}
-        ratio_numerator   = {}
-        ratio_partners    = {}
-        for t,target in enumerate(self.targets):
-            ratio_denominator[target.name] = False
-            ratio_numerator[target.name] = False
-            ratio_partners[target.name] = []
-
-            if target.target_value==self.baseline_target.target_value: 
-                ratio_denominator[target.name] = True
-                ratio_partners[target.name]    = [i.name for i in self.targets if i.target_value!=self.baseline_target.target_value ]
-            else:
-                ratio_numerator[target.name] = True
-                ratio_partners[target.name] = [ i.name for i in self.targets if i.target_value==self.baseline_target.target_value ]
-
-        # plot the features
-        plt_feature = self.df.keys()
-        for hi,feature in enumerate(plt_feature):
-
-            if feature=='target': continue
+        # plot the features and calculate significance
+        plt_features = self.df.keys()
+        for hi,feature in enumerate(plt_features):
 
             hist = HepPlotter("histogram",1)
 
@@ -158,44 +121,120 @@ class DeepLearningPlotter(object):
             hist.saveAs  = self.output_dir+"/hist_"+feature+"_"+self.date
             hist.ratio_plot  = True
             hist.ratio_type  = 'significance'
-            hist.y_ratio_label = r"S/$\sqrt{\text{B}}$"
-            hist.CMSlabel    = 'top left'
+            hist.y_ratio_label = r"Significance"
+            hist.CMSlabel = 'top left'
             hist.CMSlabelStatus   = self.CMSlabelStatus
             hist.numLegendColumns = 1
 
             hist.initialize()
 
             # Add some extra text to the plot
-            n_extra_text = 0
+            n_extra_text = 0      # auto-adjust label based on number of extra text args
             if self.processlabel: 
                 hist.extra_text.Add(self.processlabel,coords=[0.03,0.80]) # physics process that produces these features
                 n_extra_text+=1
 
-            base_data,_ = np.histogram(self.baseline_target.df[feature],bins=self.variable_labels[feature].binning,normed=True)
-            for t,target in enumerate(self.targets):
-                ratio_den = ratio_denominator[target.name]
-                ratio_num = ratio_numerator[target.name]
-                ratio_partner = ratio_partners[target.name]
+            # Create unique combinations of the targets in pairs (to calculate separation between classes)
+            targs   = [i.name for i in self.targets]
+            targets = list(itertools.combinations(targs,2)) # create pair-wise combinations
 
-                hist.Add(target.df[feature], name=target.name, draw='step',
+            # Plot the distribution for each target
+            for t,target in enumerate(self.targets):
+                name = target.name
+                other_targets = [i.name for i in self.targets if i.name!=name]
+
+                ratio_dens    = [True if i[0]==name else False for i in targets]
+                ratio_nums    = [not i for i in ratio_dens]
+
+                hist.Add(target.df[feature], name=name, draw='step',
                          linecolor=target.color, label=target.label,
-                         ratio_partner=ratio_partner,ratio_den=ratio_den,ratio_num=ratio_num)
-                if target.name!=self.baseline_target.name:
-                    t_data,_ = np.histogram(target.df[feature],bins=self.variable_labels[feature].binning,normed=True)
-                    separation = util.getSeparation(base_data,t_data)
-                    hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(self.baseline_target.name,target.name,separation),
-                                        coords=[0.03,(0.80-0.08*n_extra_text)])
-                    n_extra_text+=1
+                         ratio_partner=other_targets,ratio_den=ratio_dens,ratio_num=ratio_nums)
+
+            # Add text to display the separation between each class for the feature
+
+a = ['qb','w','bckg']
+b = list(itertools.combinations(a,2))
+>>> [('qb', 'w'), ('qb', 'bckg'), ('w', 'bckg')]
+
+            for t,targ in enumerate(targets):
+                target_a = self.targets[ targ[0] ]
+                target_b = self.targets[ targ[1] ]
+                name_a   = target_a.name
+                name_b   = target_b.name
+
+                # bin the data to make separation calculation simple
+                data_a,_ = np.histogram(target_a.df[feature],bins=self.variable_labels[feature].binning,normed=True)
+                data_b,_ = np.histogram(target_b.df[feature],bins=self.variable_labels[feature].binning,normed=True)
+
+                separation = util.getSeparation(data_a,data_b)
+
+                hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(name_a,name_b,separation),
+                                    coords=[0.03,(0.80-0.08*n_extra_text)])
+                n_extra_text+=1
 
             p = hist.execute()
             hist.savefig()
 
         return
 
+    def feature_separations(self):
+        """Plot the separations between features of the NN"""
+        fontProperties = {'family':'sans-serif'}
+        opts   = {'cmap': plt.get_cmap("viridis"), 'vmin':0, 'vmax':1}
+        labels = [self.variable_labels[feature].label for feature in self.features]
+
+        for c,target in enumerate(self.targets):
+
+            saveAs = "{0}/separations_{1}_{2}_{3}".format(self.output_dir,target1.name,target2.name,self.date)
+
+            t_ = target.df[self.features]
+
+            # Save correlation matrix to CSV file
+            #to_csv("{0}.csv".format(saveAs))
+
+            # Plot correlation matrix
+            # -- Use matplotlib directly
+            fig,ax = plt.subplots()
+
+            heatmap1 = ax.pcolor(corrmat, **opts)
+            cbar     = plt.colorbar(heatmap1, ax=ax)
+
+            cbar.ax.set_yticklabels( [i.get_text().strip('$') for i in cbar.ax.get_yticklabels()], **fontProperties )
+
+            # shift location of ticks to center of the bins
+            ax.set_xticks(np.arange(len(labels))+0.5, minor=False)
+            ax.set_yticks(np.arange(len(labels))+0.5, minor=False)
+            ax.set_xticklabels(labels, fontProperties, fontsize=12, minor=False, ha='right', rotation=70)
+            ax.set_yticklabels(labels, fontProperties, fontsize=12, minor=False)
+
+
+            ## CMS/COM Energy Label + Signal name
+            cms_stamp = hpl.CMSStamp(self.CMSlabelStatus)
+            cms_stamp.coords = [0.02,1.00]
+            cms_stamp.fontsize = 16
+            cms_stamp.va = 'bottom'
+            ax.text(0.02,1.00,cms_stamp.text,fontsize=cms_stamp.fontsize,
+                    ha=cms_stamp.ha,va=cms_stamp.va,transform=ax.transAxes)
+
+            energy_stamp    = hpl.EnergyStamp()
+            energy_stamp.ha = 'right'
+            energy_stamp.coords = [0.99,1.00]
+            energy_stamp.fontsize = 16
+            energy_stamp.va = 'bottom'
+            ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
+                    fontsize=energy_stamp.fontsize,ha=energy_stamp.ha, va=energy_stamp.va, transform=ax.transAxes)
+
+            ax.text(0.03,0.93,target.label,fontsize=16,ha='left',va='bottom',transform=ax.transAxes)
+
+            plt.savefig("{0}.{1}".format(saveAs,self.image_format),
+                        format=self.image_format,dpi=300,bbox_inches='tight')
+            plt.close()
+
+        return
+
 
     def feature_correlations(self):
         """Plot correlations between features of the NN"""
-        ## Correlation Matrices of Features (top/antitop) ##
         fontProperties = {'family':'sans-serif'}
         opts = {'cmap': plt.get_cmap("bwr"), 'vmin': -1, 'vmax': +1}
 
@@ -320,9 +359,9 @@ class DeepLearningPlotter(object):
                     json_data[target.name+"_test"]["binning"] = b_te.tolist()
                     json_data[target.name+"_test"]["content"] = d_te.tolist()
 
-#                separation = util.getSeparation(base_data,t_data)
-#                hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(self.baseline_target.name,target.name,separation),
-#                                    coords=[0.03,(0.80-0.08*n_extra_text)])
+                separation = util.getSeparation(base_data,t_data)
+                hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(self.baseline_target.name,target.name,separation),
+                                    coords=[0.03,(0.80-0.08*n_extra_text)])
 
                 p = hist.execute()
                 hist.savefig()

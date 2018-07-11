@@ -239,15 +239,20 @@ class HepPlotter(object):
         self.labels[name]     = label
         self.weights[name]    = weights
         self.ratio_den[name]  = ratio_den   # denominator in ratio
-        self.ratio_num[name]  = ratio_num   # numerator in ratio
+        self.ratio_num[name]  = ratio_num   # numerator in ratio -- deprecated
         self.ratio_partner[name] = ratio_partner
         self.draw_types[name] = draw
+
         if draw=='errorbar':
             self.errorbarplot.append(name)
             if linestyle=='solid':
                 self.linestyles[name] = 'o'        # default setting for errorbar
             else:
                 self.linestyles[name] = linestyle  # user custom option
+
+        # for ratio plots, specify for each 'partner' if the value is in the numerator or denominator
+        if self.ratio_partner[name] is not None:
+            assert len(self.ratio_partner[name])==len(self.ratio_den[name])
 
         return
 
@@ -496,37 +501,29 @@ class HepPlotter(object):
 
     def drawRatio(self):
         """Ratio plot in frame under main plot
-           (assume this -- could extend functionality and make 2D version)
            Can handle plotting multiple ratios with one quantity
-           (e.g., up/down systs with nominal)
+           (e.g., up/down systs with nominal or compare two distributions)
         """
+        drawn_ratios = []
         for i in self.names:
-            num_hists       = []   # list of histograms for numerator of ratio
-            num_hists_names = []   # names of histograms in numerator of ratio
-            if self.ratio_den[ i ]:
-                den_hist = np.array( self.histograms[ i ] )
-                try:
-                    num_hists.append( np.array(self.histograms[self.ratio_partner[i]]) )
-                    num_hists_names.append( self.ratio_partner[i] )
-                except TypeError: # unhashable type: 'list'
-                    for j in self.ratio_partner[i]:
-                        num_hists.append( np.array(self.histograms[j]) )
-                        num_hists_names.append( j )
-            else: # only look at the 'ratio_den' terms to prevent plotting ratio twice
-                continue
 
+            if self.ratio_partner[i] is None: continue  # no ratio plot for this one, skip
 
-            if self.ratio_type=='ratio':
-                self.ax2.axhline(y=1,ls='--',c='k',zorder=1) # draw once
+            partners = self.ratio_partner[i]                  # partner(s) for plotting ratio
+            single_partner = isinstance(partners,basestring)  # check if there is one or many partners
 
+            if not single_partner:
+                for p,partner in partners:
+                    if (i,p) in drawn_ratios: continue    # only plot ratios once
+                    drawn_ratios.append( (i,p) )
 
-            for nh,num_hist in enumerate(num_hists):
-
+                    self.plotRatio()
+###
                 histName = num_hists_names[nh]
 
                 if self.ratio_type=="ratio":
                     residual     = deepcopy( num_hist / den_hist )
-                    residual_err = deepcopy( np.sqrt(num_hist) / den_hist )
+                    residual_err = deepcopy( self.hists2plot[histName]['error'] / den_hist )
                 elif self.ratio_type == "significance":
                     residual     = deepcopy( num_hist / np.sqrt(den_hist) )
                     residual_err = [0 for _ in residual] # don't know how to estimate this
@@ -553,10 +550,23 @@ class HepPlotter(object):
                                   edgecolor=self.linecolors[histName],lw=2,
                                   color=self.colors[histName],ls=self.linestyles[histName],
                                   histtype='step',zorder=100)
+###
+            else:
+                self.plotRatio()
+
+self.histograms[partners]
+den_hist = np.array( self.histograms[i] )
+
+            # Draw the ratio!
+            for nh,num_hist in enumerate(num_hists):
+
 
             ## Simulation Uncertainties
             if self.drawStatUncertainty:
                 self.plotUncertainty(self.ax2,pltname=i,normalize=True)
+
+        if self.ratio_type=='ratio':
+            self.ax2.axhline(y=1,ls='--',c='k',zorder=1)  # line to 'guide the eye'
 
         ## Set the axis properties of the ratio y-axis
         self.ax2.set_ylim(ymin=self.ratio_ylims['ymin'][self.ratio_type],
