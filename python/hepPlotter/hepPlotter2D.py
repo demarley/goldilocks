@@ -18,7 +18,8 @@ Here we just plot the 2D data we're given.
 """
 from hepPlotter import HepPlotter,HepPlotterData
 
-from matplotlib import pyplot as plt
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import numpy as np
 
@@ -59,7 +60,7 @@ class HepPlotter2D(HepPlotter):
 
     def execute(self):
         """
-        Make the plot!
+        Make the plot using `pyplot.hist2d()`.
         return the Figure object to the user (they can edit it if they please)
         """
         fig,self.ax1 = plt.subplots()
@@ -84,11 +85,6 @@ class HepPlotter2D(HepPlotter):
         if self.bin_yields: self.plotBinYields(h_data, x_bin_center,y_bin_center)
         if self.bin_errors: self.plotBinErrors(h_error,x_bin_center,y_bin_center)
 
-        # Configure the axes
-        self.setYAxis()
-        self.setXAxis()
-        self.setAxisTickMarks()
-
         # Configure the colorbar
         self.drawColorbar()
 
@@ -101,18 +97,34 @@ class HepPlotter2D(HepPlotter):
 
 
     def drawColorbar(self):
-        """Draw the colorbar"""
+        """
+        Draw the vertically-oriented colorbar.
+
+        * Not many customizable options here because the colorbar is a 'plt' object
+        * and the options are applied to attributes.  
+        * User needs to modify or extend this function.
+        """
         cbar = plt.colorbar()
-        if self.logplot['data']:
-            cbar.ax.set_yticklabels( [r"10$^{\text{%s}}$"%(hpt.extract(i.get_text())) for i in cbar.ax.get_yticklabels()] )
-        else:
-            cbar.ax.set_yticklabels( [r"$\text{%s}$"%(i.get_text().replace(r'$','')) for i in cbar.ax.get_yticklabels()] )
 
         if self.colorbar:
             try:
                 cbar.ax.set_ylabel(self.colorbar["title"])
             except KeyError:
                 print "WARNING : Key 'title' not specified for colorbar"
+
+            # Modify tick labels
+            cbar_fsize = int(mpl.rcParams['axes.labelsize']*0.75)
+            cbar.ax.set_yticklabels(cbar.ax.get_yticklabels(),fontsize=cbar_fsize)
+
+            # Modify tick sizes
+            for tick in ['major','minor']:
+                try:
+                    length = self.colorbar["ytick.{0}.size".format(tick)]
+                except KeyError:
+                    length = 0
+                cbar.ax.yaxis.set_tick_params(which=tick,length=length)
+
+        return
 
 
 

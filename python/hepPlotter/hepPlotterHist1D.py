@@ -21,7 +21,7 @@ from copy import deepcopy
 
 from hepPlotter import HepPlotter,HepPlotterData
 
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
 
@@ -57,7 +57,7 @@ class HepPlotterHist1D(HepPlotter):
             self.ratio_yticks = {'ratio':np.asarray([0.6,1.0,1.4]),
                                  'significance':self.ax2.get_yticks()[::2]}
         else:
-            fig,self.ax1 = plt.subplots(figsize=self.figsize)
+            fig,self.ax1 = plt.subplots()
 
 
         ##  Errorbars (should be in foreground:  start with zorder 150)
@@ -123,8 +123,10 @@ class HepPlotterHist1D(HepPlotter):
         return fig
 
 
-    def plotErrorbars(self,errorbar,axis=self.ax1):
+    def plotErrorbars(self,errorbar,axis=None):
         """Draw errorbar plot(s)"""
+        if axis is None: axis = self.ax1
+
         data       = data2plot.data
         error      = data2plot.error
         bin_center = data2plot.center
@@ -142,8 +144,10 @@ class HepPlotterHist1D(HepPlotter):
         return errorbar
 
 
-    def plotHistograms(self,histogram,axis=self.ax1,uncertainty=False):
+    def plotHistograms(self,histogram,axis=None,uncertainty=False):
         """Plot histograms"""
+        if axis is None: axis = self.ax1
+
         data       = data2plot.data
         error      = data2plot.error
         bin_center = data2plot.center
@@ -180,14 +184,15 @@ class HepPlotterHist1D(HepPlotter):
         return data2plot
 
 
-    def drawLegend(self,axis=self.ax1):
+    def drawLegend(self,axis=None):
         """Draw the legend"""
+        if axis is None: axis = self.ax1
+
+        # Check for extra kwargs the user may have added to override defaults
+        kwargs = dict( (k,self.legend[k]) for k in self.legend if k!="ncol" )
+
         handles, labels = axis.get_legend_handles_labels() # for re-ordering, if needed
-        leg = axis.legend(handles,labels,numpoints=self.legend["numpoints"],
-                          fontsize=self.legend["fontsize"], #self.label_size-2,
-                          ncol=self.legend["ncol"],
-                          columnspacing=self.legend["spacing"], #0.3
-                          loc=self.legend["location"])
+        leg = axis.legend(handles,labels,ncol=self.legend["ncol"],**kwargs)
         leg.draw_frame(False)
 
         return
@@ -208,7 +213,6 @@ class HepPlotterHist1D(HepPlotter):
         for data2plot in self.data2plot:
             if not data2plot.ratios: continue             # no ratio plot, skip
 
-            name     = data2plot.name
             partners = data2plot.ratios                   # partner(s) for ratio
             single_partner = False
             try:
@@ -222,41 +226,12 @@ class HepPlotterHist1D(HepPlotter):
 
             if not single_partner:
                 for p,partner in enumerate(partners):
-                    p_name    = partner[0]
-                    numerator = partner[1]
-                    p_data    = self.data2plot[p_name]
-
-                    if numerator:
-                        names    = (name,p_name)
-                        num_data = data2plot
-                        den_data = p_data
-                    else:
-                        names    = (p_name,name)
-                        num_data = p_data
-                        den_data = data2plot
-
-                    if names in drawn_ratios: continue
-                    drawn_ratios.append( names )
-
-                    self.plotRatio(num_data,den_data)
+                    #self.plotRatio(num_data,den_data)
+                    names = self.plotRatio(data2plot,partner)
+                    if names: drawn_ratios.append( names )
             else:
-                p_name    = partners[0]
-                numerator = partners[1]
-                p_data    = self.data2plot[p_name]
-
-                if numerator:
-                    names    = (name,p_name)
-                    num_data = data2plot
-                    den_data = p_data
-                else:
-                    names    = (p_name,name)
-                    num_data = p_data
-                    den_data = data2plot
-
-                if names in drawn_ratios: continue
-                drawn_ratios.append( names )
-
-                self.plotRatio(num_data,den_data)
+                names = self.plotRatio(data2plot,partners)
+                if names: drawn_ratios.append( names )
 
 
             ## Ratio Uncertainties
@@ -271,27 +246,44 @@ class HepPlotterHist1D(HepPlotter):
                           ymax=self.ratio_ylims['ymax'][self.ratio_type])
         self.ratio_yticks['significance']=self.ax2.get_yticks()[::2]
 
-        self.ax2.set_yticks(self.ax2.get_yticks()[::2])
-        self.ax2.set_ylabel(self.y_label_ratio,fontsize=self.label_size,ha='center',va='bottom')
-        self.ax2.set_yticklabels(self.ax2.get_yticks(),fontProperties,fontsize=self.label_size)
+        self.ax2.set_yticks(self.ratio_yticks[self.ratio_type])
+        self.ax2.set_ylabel(self.y_label_ratio,ha='center',va='bottom')
 
         return
 
 
 
-    def plotRatio(self,numerator,denominator):
+    def plotRatio(self,data2plot,partner):
         """Make the ratio plot"""
-        den_data   = denominator.data
-        num_data   = numerator.data
+        names  = False
+        p_name = partner[0]
+        p_data = self.data2plot[p_name]
+        isNumerator = partner[1]
+
+        if isNumerator:
+            names       = (data2plot.name,p_name)
+            numerator   = data2plot
+            denominator = p_data
+        else:
+            names    = (p_name,data2plot.name)
+            numerator = p_data
+            denominator = data2plot
+
+        if names in drawn_ratios:
+            return False
+
         bin_center = numerator.center
         bin_width  = numerator.width
 
         # put information into new instance -- copy original information
         ratio_data = hpt.Data()
-        for key in dir(numerator):
+        for key in dir(num_data):
             original = getattr(numerator,key)
             setattr( ratio_data, key, original )
 
+
+        num_data = numerator.data
+        den_data = denominator.data
 
         if self.ratio_type=="ratio":
             ratio_data.data  = (num_data / den_data).copy
@@ -303,22 +295,21 @@ class HepPlotterHist1D(HepPlotter):
         else:
             print " WARNING :: Un-specified method for ratio plot '{0}' ",format(self.ratio_type)
             print "            Setting ratio equal to 1.0 with no uncertainties    "
-            ratio_data.data  = np.ones( len(num_hist) )
+            ratio_data.data  = np.ones( len(num_data) )
             ratio_data.error = [0 for _ in residual]
 
 
-        if num_data.isErrorbar:
+        if numerator.isErrorbar:
             ratio_data.kwargs["xerr"] = numerator.width
             self.plotErrorbars(ratio_data,axis=self.ax2)
         else:
-            nan_ind = np.where( np.isnan(ratio_data.data) )  # remove Nan/inf values
-            inf_ind = np.where( np.isinf(ratio_data.data) )
-            ratio_data.data[nan_ind] = 0.
-            ratio_data.data[inf_ind] = 0.
+            # remove NaN/inf values from hist
+            nan_inf_ind = np.where( np.isnan(ratio_data.data) or np.isinf(ratio_data.data) )
+            ratio_data.data[nan_inf_ind] = 0.
 
             self.plotHistograms(ratio_data,axis=self.ax2,uncertainty=True)
 
-        return
+        return names
 
 
 
@@ -342,7 +333,7 @@ class HepPlotterHist1D(HepPlotter):
             resid_unc = {'up':nominal+error,
                          'dn':nominal-error}
 
-        if hist.hist_type=='errorbar':
+        if hist.isErrorbar:
             # Draw uncertainty as errorbars
             resid_unc = dict( (k,list(resid_unc[k])) for k in keys )  # convert to lists
 

@@ -21,7 +21,7 @@ from copy import deepcopy
 
 from hepPlotterHist1D import HepPlotterHist1D
 
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
 
@@ -147,10 +147,11 @@ class HepPlotterEff1D(HepPlotterHist1D):
 
 
 
-    def drawPhysics(self,data2plot,axis=self.ax1):
+    def drawPhysics(self,data2plot,axis=None):
         """Along with the efficiency curve, draw the physics distribution on twin axis"""
         self.yTwinMinorLocator = AutoMinorLocator()
 
+        if axis is None: axis = self.ax1
         axis_twin = axis.twinx()
 
         ## Draw the histogram
@@ -161,13 +162,13 @@ class HepPlotterEff1D(HepPlotterHist1D):
                 data.kwargs["zorder"] = 70+n     # draw behind efficiency curves
                 tmp_dataplot = self.plotErrorbars(data,axis=axis_twin)
             elif data.isHistogram:
-				data.kwargs["zorder"] = 50+n
-				data.kwargs["bottom"] = bottom if self.stacked else None
-				tmp_dataplot = self.plotHistograms(data,axis=axis_twin)
+                data.kwargs["zorder"] = 50+n
+                data.kwargs["bottom"] = bottom if self.stacked else None
+                tmp_dataplot = self.plotHistograms(data,axis=axis_twin)
 
-			data2plot[n] = tmp_barplot
-			if n==0: bottom  = data.plotData      # modify 'bottom' for stacked plots
-			else:    bottom += data.plotData      # this also records the height of plotted data
+            data2plot[n] = tmp_barplot
+            if n==0: bottom  = data.plotData      # modify 'bottom' for stacked plots
+            else:    bottom += data.plotData      # this also records the height of plotted data
 
         axis_twin.yaxis.set_tick_params(which='major', length=8)
         axis_twin.set_ylabel("",fontsize=0,ha='right',va='top')

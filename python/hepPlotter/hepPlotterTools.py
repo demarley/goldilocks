@@ -176,7 +176,7 @@ def data2list2D(data,weights=None,normed=False,binning=1):
     results.bins   = {'x':bins_x,'y':bins_y}
     results.center = {'x':binnsx,'y':binnsy}
     results.width  = {'x':0.5*(bins_x[:-1]-bins_x[1:]),
-                      'y':0.5*(bins_y[:-1]-bins_y[1:])}}
+                      'y':0.5*(bins_y[:-1]-bins_y[1:])}
 
     return results
 

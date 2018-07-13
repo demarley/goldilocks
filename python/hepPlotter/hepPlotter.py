@@ -23,10 +23,11 @@ import ROOT
 from collections import OrderedDict
 
 import numpy as np
+import matplotlib.style
 import matplotlib as mpl
-mpl.style.use('cms')
+mpl.style.use('cms.mplstyle')
 
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from matplotlib.colors import LogNorm
 from matplotlib.ticker import AutoMinorLocator,FormatStrFormatter
@@ -43,7 +44,6 @@ class HepPlotterData(object):
         self.name  = ''
         self.color = 'k' 
         self.fmt   = 'o'
-        self.capsize   = 0
         self.linecolor = 'k'
         self.edgecolor = 'k'
         self.linestyle = '-'
@@ -100,7 +100,6 @@ class HepPlotter(object):
         self.y_label = 'y'
         self.y_label_ratio = self.ratio_plot
         self.extra_text  = hpl.PlotText()
-        self.minor_ticks = True
         self.lumi     = '14.7'
         self.plotLUMI = False
         self.CMSlabel = None                 # 'top left', 'top right' & 'outer' for 2D
@@ -109,9 +108,7 @@ class HepPlotter(object):
         self.saveAs = "plot{0}D_{1}".format(self.dimensions,self.CMSlabelStatus) # save figure with name
         self.drawStatUncertainty = False
         self.drawUncertaintyMain = False  # draw uncertainties in the top frame
-        self.uncertaintyHistType = 'step'
-        self.figsize = (10,6)
-        self.legend  = {"ncol":2,"spacing":0.3,"location":1,"fontsize":18,"numpoints":1}
+        self.legend  = {"ncol":2}
         self.logplot = {"y":False,"x":False,"data":False}  # plot axes or data (2D) on log scale
 
         self.text_coords = {'top left': {'x':[0.03]*3,        'y':[0.97,0.90,0.83]},\
@@ -223,75 +220,12 @@ class HepPlotter(object):
 
 
     def execute(self):
-        """
-        Execute the plot.  Done in inherited class
-        """
+        """Execute the plot.  Done in inherited class"""
         pass
 
 
 
-    def setYAxis(self,y_axis=self.ax1):
-        """Draw labels for y-axis -- simple so that users can specify limits/range
-           of their y-axis and just pass the axis ticks here"""
-        y_axis.set_ylabel(self.y_label,ha='right',va='bottom',position=(0,1))
-        axis_yticks = y_axis.get_yticks()
-
-        if self.logplot["y"]:
-            logTickLabels = [r"10$^{\text{%s}}$"%(int(np.log10(i)) ) for i in axis_yticks]
-            y_axis.set_yticklabels(logTickLabels)
-        else:
-            if len(set(axis_yticks.astype(int)))==len(axis_yticks):
-                # axis labels are integers
-                y_axis.set_yticklabels(axis_yticks.astype(int))
-            else:
-                # axis labels have decimals
-                y_axis.set_yticklabels(["{0}".format(i) for i in axis_yticks[0:-1]])
-
-        y_axis.set_major_formatter(FormatStrFormatter('%g'))
-
-        return
-
-
-
-    def setXAxis(self,x_axis=self.ax1):
-        """Draw labels for x-axis"""
-        x_axis.set_xlabel(self.x_label,ha='right',va='top',position=(1,0))
-        x_axis_xticks = x_axis.get_xticks()
-
-        if self.logplot["x"]:
-            logTickLabels = [r"10$^{\text{%s}}$"%(int(np.log10(i)) ) for i in x_axis_xticks]
-            x_axis.set_yticklabels(logTickLabels)
-        else:
-            if len(set(x_axis_xticks.astype(int)))==len(x_axis_xticks):
-                # axis labels are integers
-                x_axis.set_xticklabels(x_axis_xticks.astype(int))
-            else:
-                # axis labels have decimals
-                x_axis.set_xticklabels(["{0}".format(i) for i in x_axis_xticks])
-
-        x_axis.set_major_formatter(FormatStrFormatter('%g'))
-
-        return
-
-
-
-    def setAxisTickMarks(self):
-        """Setup axis ticks"""
-        self.ax1.yaxis.set_tick_params(which='major', length=8)
-        self.ax1.xaxis.set_tick_params(which='major', length=8)
-        if self.minor_ticks:
-            if not self.logplot["y"]:
-                self.ax1.yaxis.set_minor_locator(self.y1minorLocator) # causes tick number error on logplot
-            self.ax1.xaxis.set_minor_locator(self.x1minorLocator)
-            if self.ratio_plot:
-                self.ax2.xaxis.set_minor_locator(self.x2minorLocator)
-                self.ax2.yaxis.set_minor_locator(self.y2minorLocator)
-
-        return
-
-
-
-    def text_labels(self,axis=self.ax1):
+    def text_labels(self,axis=None):
         """Labels for CMS plots"""
         if self.dimensions==2 and self.CMSlabel!='outer':
             print " WARNING :: You have chosen a label position "
@@ -299,6 +233,7 @@ class HepPlotter(object):
             print "            Please consider changing the "
             print "            parameter 'CMSlabel' to 'outer'."
 
+        if axis is None: axis = self.ax1
         text = self.text_coords[self.CMSlabel]
 
         ## CMS, Energy, and LUMI labels
@@ -320,12 +255,12 @@ class HepPlotter(object):
 
 
         axis.text(cms_stamp.coords[0],cms_stamp.coords[1],cms_stamp.text,fontsize=cms_stamp.fontsize,
-                      ha=cms_stamp.ha,va=cms_stamp.va,transform=self.ax1.transAxes)
+                      ha=cms_stamp.ha,va=cms_stamp.va,transform=axis.transAxes)
 
         energy_lumi_text = energy_stamp.text+", "+lumi_stamp.text if self.plotLUMI else energy_stamp.text
         axis.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_lumi_text,
                       fontsize=energy_stamp.fontsize,ha=energy_stamp.ha,va=energy_stamp.va,
-                      color=energy_stamp.color,transform=self.ax1.transAxes)
+                      color=energy_stamp.color,transform=axis.transAxes)
 
 
         ## Extra text -- other text labels the user wants to add
