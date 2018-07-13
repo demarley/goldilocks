@@ -211,14 +211,10 @@ class HepPlotterHist1D(HepPlotter):
         """
         drawn_ratios = []
         for data2plot in self.data2plot:
-            if not data2plot.ratios: continue             # no ratio plot, skip
+            if not data2plot.ratios: continue      # no ratio plot, skip
 
-            partners = data2plot.ratios                   # partner(s) for ratio
-            single_partner = False
-            try:
-                second = partners[1][1]                   # check number of partners
-            except TypeError:
-                single_partner = True
+            partners = data2plot.ratios            # partner(s) for ratio
+            single_partner = len(partners)==1
 
             names    = None
             num_data = None

@@ -12,32 +12,23 @@ Base class for plotting deep learning
 Designed for running on desktop at TAMU
 with specific set of software installed
 --> not guaranteed to work in CMSSW environment!
-
-Does not use ROOT!
-Instead, uses matplotlib to generate figures
 """
-import os
-import sys
 import json
 import util
 import itertools
 from datetime import date
 import numpy as np
 
-import matplotlib.pyplot as plt
-from matplotlib import rc
-rc('font', family='sans-serif')
-from keras.utils.vis_utils import plot_model as keras_plot
-from sklearn.metrics import roc_curve, auc
+from hepPlotter.hepPlotterHist1D import HepPlotterHist1D
+from hepPlotter.hepPlotter2D import HepPlotter2D
 
 import hepPlotter.hepPlotterLabels as hpl
 import hepPlotter.hepPlotterTools as hpt
-from hepPlotter.hepPlotter import HepPlotter
 
 
 
 class Target(object):
-    """Class to contain information for targets used in training"""
+    """Class to contain information for targets used in training/inference"""
     def __init__(self,name=""):
         self.name  = name     # Name of this target, e.g., 'signal'
         self.df    = None     # dataframe of this target's features
@@ -47,24 +38,25 @@ class Target(object):
         self.binning = 1
 
 
+
 class DeepLearningPlotter(object):
     """Plotting utilities for deep learning"""
     def __init__(self):
         """Give default values to member variables"""
         self.date = date.today().strftime('%d%b%Y')
-        self.betterColors = hpt.betterColors()['linecolors']
+
+        self.betterColors    = hpt.betterColors()['linecolors']
         self.sample_labels   = hpl.sample_labels()
         self.variable_labels = hpl.variable_labels()
 
         self.msg_svc      = util.VERBOSE()
-        self.filename     = ""
         self.output_dir   = ''
         self.image_format = 'pdf'
         self.process_label = ''      # if a single process is used for all training, set this
 
         self.df = None
         self.targets = []
-        self.baseline_target = None
+        self.target_pairs = None
 
         self.CMSlabelStatus = "Simulation Internal"
 
@@ -73,16 +65,14 @@ class DeepLearningPlotter(object):
         """
         Set parameters of class to make plots
 
-        @param dataframe      The dataframe that contains physics information for training/testing
+        @param dataframe      The dataframe that contains the physics information
         @param target_names   The names for different targets to use for making the plots
         @param target_values  The values for the different targets, e.g., [0,1,2,...]
         """
         self.df = dataframe
 
-        try:
-            self.processlabel = self.sample_labels[self.filename].label   # process used in each plot
-        except KeyError:
-            self.processlabel = ''
+        self.listOfFeatures     = self.df.keys()
+        self.listOfFeaturePairs = list(itertools.combinations(self.listOfFeatures,2))
 
         assert len(target_names)==len(target_values), "Lengths of target names and target values are not the same"
 
@@ -93,6 +83,13 @@ class DeepLearningPlotter(object):
             tmp.color = self.betterColors[i]
             tmp.target_value = v
             self.targets.append(tmp)
+
+        # Create unique combinations of the targets in pairs 
+        # (to calculate separation between classes)
+        target_names = [i.name for i in self.targets]
+        self.target_pairs = list(itertools.combinations(target_names,2))
+
+        self.getSeparations()
 
         return
 
@@ -106,67 +103,51 @@ class DeepLearningPlotter(object):
         self.msg_svc.INFO("DL : Plotting features.")
 
         # plot the features and calculate significance
-        plt_features = self.df.keys()
-        for hi,feature in enumerate(plt_features):
+        for hi,feature in enumerate(self.listOfFeatures):
 
-            hist = HepPlotter("histogram",1)
+            hist = HepPlotterHist1D()
 
             hist.normed  = True
             hist.stacked = False
-            hist.logplot = False
             hist.binning = self.variable_labels[feature].binning
             hist.x_label = self.variable_labels[feature].label
-            hist.y_label = "Events"
+            hist.y_label = "A.U." if hist.normed else "Events"
             hist.format  = self.image_format
             hist.saveAs  = self.output_dir+"/hist_"+feature+"_"+self.date
-            hist.ratio_plot  = True
-            hist.ratio_type  = 'significance'
-            hist.y_ratio_label = r"Significance"
-            hist.CMSlabel = 'top left'
-            hist.CMSlabelStatus   = self.CMSlabelStatus
-            hist.numLegendColumns = 1
+            hist.ratio_plot     = True
+            hist.ratio_type     = 'significance'
+            hist.y_label_ratio  = r"S/$\sqrt{\text{B}}$"
+            hist.CMSlabel       = 'top left'
+            hist.CMSlabelStatus = self.CMSlabelStatus
 
             hist.initialize()
 
             # Add some extra text to the plot
             n_extra_text = 0      # auto-adjust label based on number of extra text args
-            if self.processlabel: 
-                hist.extra_text.Add(self.processlabel,coords=[0.03,0.80]) # physics process that produces these features
+            if self.processlabel: # physics process that produces these features
+                hist.extra_text.Add(self.processlabel,coords=[0.03,0.80])
                 n_extra_text+=1
 
-            # Create unique combinations of the targets in pairs (to calculate separation between classes)
-            targs   = [i.name for i in self.targets]
-            targets = list(itertools.combinations(targs,2)) # create pair-wise combinations
 
-            # Plot the distribution for each target
+            # Plot the distribution for each target with ratios between classes
             for t,target in enumerate(self.targets):
+                ratios = []
                 name = target.name
-                other_targets = [i.name for i in self.targets if i.name!=name]
+                for pair in self.target_pairs:
+                    # only check with first entry to prevent double-plotting ratios
+                    if name == pair[0]: ratios.append( (pair[1],True))
 
-                ratio_dens    = [True if i[0]==name else False for i in targets]
-                ratio_nums    = [not i for i in ratio_dens]
+                kwargs = {"draw_type":"step","edgecolor":target.color,"label":target.label}
 
-                hist.Add(target.df[feature], name=name, draw='step',
-                         linecolor=target.color, label=target.label,
-                         ratio_partner=other_targets,ratio_den=ratio_dens,ratio_num=ratio_nums)
+                hist.Add(target.df[feature],name=name,ratios=ratios,**kwargs)
+
 
             # Add text to display the separation between each class for the feature
+            for target in self.target_pairs:
+                name_a = target[0] 
+                name_b = target[1]
 
-a = ['qb','w','bckg']
-b = list(itertools.combinations(a,2))
->>> [('qb', 'w'), ('qb', 'bckg'), ('w', 'bckg')]
-
-            for t,targ in enumerate(targets):
-                target_a = self.targets[ targ[0] ]
-                target_b = self.targets[ targ[1] ]
-                name_a   = target_a.name
-                name_b   = target_b.name
-
-                # bin the data to make separation calculation simple
-                data_a,_ = np.histogram(target_a.df[feature],bins=self.variable_labels[feature].binning,normed=True)
-                data_b,_ = np.histogram(target_b.df[feature],bins=self.variable_labels[feature].binning,normed=True)
-
-                separation = util.getSeparation(data_a,data_b)
+                separation = self.separations[feature]['-'.join(target)]
 
                 hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(name_a,name_b,separation),
                                     coords=[0.03,(0.80-0.08*n_extra_text)])
@@ -177,76 +158,95 @@ b = list(itertools.combinations(a,2))
 
         return
 
-    def feature_separations(self):
+
+    def separation(self):
         """Plot the separations between features of the NN"""
-        fontProperties = {'family':'sans-serif'}
-        opts   = {'cmap': plt.get_cmap("viridis"), 'vmin':0, 'vmax':1}
-        labels = [self.variable_labels[feature].label for feature in self.features]
+        listOfFeatures = list(self.listOfFeatures)
+        listOfFeaturePairs = list(self.listOfFeaturePairs)
 
-        for c,target in enumerate(self.targets):
+        nfeatures = len(listOfFeatures)
 
-            saveAs = "{0}/separations_{1}_{2}_{3}".format(self.output_dir,target1.name,target2.name,self.date)
+        for target in self.target_pairs:
+            target_a = target[0]
+            target_b = target[1]
 
-            t_ = target.df[self.features]
+            ## One dimensional separation plot (horizontal bar chart)
+            saveAs = "{0}/separations1D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
 
-            # Save correlation matrix to CSV file
-            #to_csv("{0}.csv".format(saveAs))
+            separations = [self.separations[f]['-'.join(target)] for f in listOfFeatures]
 
-            # Plot correlation matrix
+            # sort data by separation value
+            data = list( zip(listOfFeatures,separations) )
+            data.sort(key=lambda x: x[1])
+            listOfFeatures[:],separations[:] = zip(*data)
+
+            # make the bar plot
+            fig,ax = plt.subplots()
+            ax.barh(listOfFeatures, separations, align='center')
+
+            # CMS/COM Energy Label + Signal name
+            self.stamp_cms(ax)
+            self.stamp_energy(ax)
+            ax.text(0.03,0.93,"{0} - {1}".format(target_a,target_b),fontsize=16,
+                    ha='left',va='bottom',transform=ax.transAxes)
+
+            plt.savefig("{0}.{1}".format(saveAs,self.image_format))
+            plt.close()
+
+
+            ## Two dimensional separation plot
+            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
+
+            # from the separations values for each unique (feature_x,feature_y) combination
+            # build a matrix that can be drawn using hist2d()
+            separations = []
+            x_coord = []
+            y_coord = []
+
+            for f in listOfFeaturePairs:
+                separations.append(self.separations['-'.join(f)]['-'.join(target)])
+                x_coord.append(self.listOfFeatures.index(f[0]))
+                y_coord.append(self.listOfFeatures.index(f[1]))
+
+            # Now repeat the entries with flipped indices to get the full matrix
+            x = list(x_coord)+list(y_coord)
+            y = list(y_coord)+list(x_coord)
+            separations += separations
+
+            # Plot separation matrix
             # -- Use matplotlib directly
             fig,ax = plt.subplots()
 
-            heatmap1 = ax.pcolor(corrmat, **opts)
-            cbar     = plt.colorbar(heatmap1, ax=ax)
-
-            cbar.ax.set_yticklabels( [i.get_text().strip('$') for i in cbar.ax.get_yticklabels()], **fontProperties )
+            plt.hist2d(x,y,bins=[range(nfeatures+1),range(nfeatures+1)],
+                       weights=separations,vmin=0.0)
+            cbar = plt.colorbar()
+            cbar.ax.set_ylabel("Separation")
 
             # shift location of ticks to center of the bins
-            ax.set_xticks(np.arange(len(labels))+0.5, minor=False)
-            ax.set_yticks(np.arange(len(labels))+0.5, minor=False)
-            ax.set_xticklabels(labels, fontProperties, fontsize=12, minor=False, ha='right', rotation=70)
-            ax.set_yticklabels(labels, fontProperties, fontsize=12, minor=False)
-
+            ax.set_xticks(np.arange(len(self.listOfFeatures))+0.5, minor=False)
+            ax.set_yticks(np.arange(len(self.listOfFeatures))+0.5, minor=False)
+            ax.set_xticklabels(self.listOfFeatures, minor=False, ha='right', rotation=70)
+            ax.set_yticklabels(self.listOfFeatures, minor=False)
 
             ## CMS/COM Energy Label + Signal name
-            cms_stamp = hpl.CMSStamp(self.CMSlabelStatus)
-            cms_stamp.coords = [0.02,1.00]
-            cms_stamp.fontsize = 16
-            cms_stamp.va = 'bottom'
-            ax.text(0.02,1.00,cms_stamp.text,fontsize=cms_stamp.fontsize,
-                    ha=cms_stamp.ha,va=cms_stamp.va,transform=ax.transAxes)
-
-            energy_stamp    = hpl.EnergyStamp()
-            energy_stamp.ha = 'right'
-            energy_stamp.coords = [0.99,1.00]
-            energy_stamp.fontsize = 16
-            energy_stamp.va = 'bottom'
-            ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
-                    fontsize=energy_stamp.fontsize,ha=energy_stamp.ha, va=energy_stamp.va, transform=ax.transAxes)
-
+            self.stamp_cms(ax)
+            self.stamp_energy(ax)
             ax.text(0.03,0.93,target.label,fontsize=16,ha='left',va='bottom',transform=ax.transAxes)
 
-            plt.savefig("{0}.{1}".format(saveAs,self.image_format),
-                        format=self.image_format,dpi=300,bbox_inches='tight')
+            plt.savefig("{0}.{1}".format(saveAs,self.image_format))
             plt.close()
 
         return
 
 
-    def feature_correlations(self):
+    def correlation(self):
         """Plot correlations between features of the NN"""
-        fontProperties = {'family':'sans-serif'}
-        opts = {'cmap': plt.get_cmap("bwr"), 'vmin': -1, 'vmax': +1}
+        opts = {'cmap':plt.get_cmap("bwr"),'vmin':-1,'vmax':1}
 
         for c,target in enumerate(self.targets):
-
             saveAs = "{0}/correlations_{1}_{2}".format(self.output_dir,target.name,self.date)
 
-            allkeys = target.df.keys()
-            keys = []
-            for key in allkeys:
-                if key!='target': keys.append(key)
-            t_ = target.df[keys]
+            t_ = target.df.drop('target',axis=1)
             corrmat = t_.corr()
 
             # Save correlation matrix to CSV file
@@ -259,8 +259,6 @@ b = list(itertools.combinations(a,2))
             heatmap1 = ax.pcolor(corrmat, **opts)
             cbar     = plt.colorbar(heatmap1, ax=ax)
 
-            cbar.ax.set_yticklabels( [i.get_text().strip('$') for i in cbar.ax.get_yticklabels()], **fontProperties )
-
             labels = [self.variable_labels[feature].label for feature in corrmat.columns.values]
             # shift location of ticks to center of the bins
             ax.set_xticks(np.arange(len(labels))+0.5, minor=False)
@@ -268,23 +266,9 @@ b = list(itertools.combinations(a,2))
             ax.set_xticklabels(labels, fontProperties, fontsize=12, minor=False, ha='right', rotation=70)
             ax.set_yticklabels(labels, fontProperties, fontsize=12, minor=False)
 
-
             ## CMS/COM Energy Label + Signal name
-            cms_stamp = hpl.CMSStamp(self.CMSlabelStatus)
-            cms_stamp.coords = [0.02,1.00]
-            cms_stamp.fontsize = 16
-            cms_stamp.va = 'bottom'
-            ax.text(0.02,1.00,cms_stamp.text,fontsize=cms_stamp.fontsize,
-                    ha=cms_stamp.ha,va=cms_stamp.va,transform=ax.transAxes)
-
-            energy_stamp    = hpl.EnergyStamp()
-            energy_stamp.ha = 'right'
-            energy_stamp.coords = [0.99,1.00]
-            energy_stamp.fontsize = 16
-            energy_stamp.va = 'bottom'
-            ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
-                    fontsize=energy_stamp.fontsize,ha=energy_stamp.ha, va=energy_stamp.va, transform=ax.transAxes)
-
+            self.stamp_cms(ax)
+            self.stamp_energy(ax)
             ax.text(0.03,0.93,target.label,fontsize=16,ha='left',va='bottom',transform=ax.transAxes)
 
             plt.savefig("{0}.{1}".format(saveAs,self.image_format),
@@ -308,21 +292,17 @@ b = list(itertools.combinations(a,2))
 
                 hist = HepPlotter("histogram",1)
 
-                hist.ratio_plot    = True
-                hist.ratio_type    = "ratio"
-                hist.y_ratio_label = "Test/Train"
-                hist.label_size    = 14
+                hist.ratio_plot = "ratio"
                 hist.normed  = True  # compare shape differences (likely don't have the same event yield)
                 hist.format  = self.image_format
                 hist.saveAs  = "{0}/hist_DNN_prediction_kfold{1}_target{2}_{3}".format(self.output_dir,i,t_ind,self.date)
-                hist.binning = [bb/10. for bb in range(11)]
+                hist.binning = [bb*0.1 for bb in range(11)]
                 hist.stacked = False
-                hist.logplot = False
                 hist.x_label = "Prediction"
-                hist.y_label = "Arbitrary Units"
+                hist.y_label = "A.U."
+                hist.y_label_ratio = "Test/Train"
                 hist.CMSlabel = 'top left'
                 hist.CMSlabelStatus   = self.CMSlabelStatus
-                hist.numLegendColumns = 1
 
                 hist.extra_text.Add("{0} Prediction".format(tar.name),coords=[0.03,0.80],fontsize=14)
                 if self.processlabel: hist.extra_text.Add(self.processlabel,coords=[0.03,0.72],fontsize=14)
@@ -332,36 +312,46 @@ b = list(itertools.combinations(a,2))
                 json_data = {}
                 for t,target in enumerate(self.targets):
 
-                    target_value = values[target.target_value]  # arrays for multiple predictions 
+                    target_value = values[target.target_value]  # arrays for multiclassification 
 
                     train_t = train[np.where((trainY==target_value).all(axis=1))][:,t_ind] # get the t_ind prediction for this target 
                     test_t  = test[np.where((testY==target_value).all(axis=1))][:,t_ind]
 
+                    train_kwargs = {"draw_type":"step","edgecolor":target.color,
+                                    "label":target.label+" Train"}
+                    test_kwargs  = {"draw_type":"stepfilled","edgecolor":target.color,
+                                    "color":target.color,"linewidth":0,"alpha":0.5,
+                                    "label":target.label+" Test"}
+
                     ## Training
-                    hist.Add(train_t, 
-                             name=target.name+'_train', linecolor=target.color,
-                             linewidth=2, draw='step', label=target.label+" Train",
-                             ratio_den=True,ratio_num=False,ratio_partner=target.name+'_test')
+                    hist.Add(train_t,name=target.name+'_train',ratios=[],**train_kwargs)
+
                     ## Testing
-                    hist.Add(test_t, 
-                             name=target.name+'_test', linecolor=target.color, color=target.color,
-                             linewidth=0, draw='stepfilled', label=target.label+" Test", alpha=0.5,
-                             ratio_den=False,ratio_num=True,ratio_partner=target.name+'_train')
+                    ratios = [(target.name+'_train',True)]
+                    hist.Add(test_t,name=target.name+'_test',ratios=ratios,**test_kwargs)
 
                     ## Save data to JSON file
                     json_data[target.name+"_train"] = {}
                     json_data[target.name+"_test"]  = {}
-                    d_tr,b_tr = np.histogram(train_t,bins=hist.binning)
-                    d_te,b_te = np.histogram(test_t,bins=hist.binning)
+                    d_tr,b_tr = np.histogram(train_t,bins=hist.binning,normed=hist.normed)
+                    d_te,b_te = np.histogram(test_t,bins=hist.binning,normed=hist.normed)
 
                     json_data[target.name+"_train"]["binning"] = b_tr.tolist()
                     json_data[target.name+"_train"]["content"] = d_tr.tolist()
                     json_data[target.name+"_test"]["binning"] = b_te.tolist()
                     json_data[target.name+"_test"]["content"] = d_te.tolist()
 
-                separation = util.getSeparation(base_data,t_data)
-                hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(self.baseline_target.name,target.name,separation),
-                                    coords=[0.03,(0.80-0.08*n_extra_text)])
+                # calculate separation between predictions
+                for t,target in enumerate(self.target_pairs):
+                    data_a = json_data[ target[0]+"_test" ]["content"]
+                    data_b = json_data[ target[1]+"_test" ]["content"]
+
+                    separation = util.getSeparation(data_a,data_b)
+
+                    hist.extra_text.Add("Test Sep({0},{1}) = {2:.2f}".format(target[0],target[1],separation),
+                                        coords=[0.03,(0.80-0.08*t)])
+
+                    json_data[ '-'.join(target)+"_test" ]["separation"] = separation
 
                 p = hist.execute()
                 hist.savefig()
@@ -384,8 +374,8 @@ b = list(itertools.combinations(a,2))
         fig,ax = plt.subplots()
 
         # Draw all of the ROC curves from the K-fold cross-validation
-        ax.plot([0, 1], [0, 1], ls='--',label='No Discrimination',lw=2,c='gray')
-        ax.axhline(y=1,lw=1,c='lightgray',ls='--')
+        ax.plot([0,1],[0,1],ls='--',label='No Discrimination',lw=2,c='gray')
+        ax.axhline(y=1,lw=1,c='k',ls='-')
 
         for ft,(fpr,tpr) in enumerate(zip(fprs,tprs)):
             # Plot ROC curve
@@ -400,10 +390,8 @@ b = list(itertools.combinations(a,2))
         ax.set_xlim([0.0, 1.0])
         ax.set_ylim([0.0, 1.5])
 
-        ax.set_xlabel(r'$\epsilon$(anti-top)',fontsize=22,ha='right',va='top',position=(1,0))
-        ax.set_xticklabels(["{0:.1f}".format(i) for i in ax.get_xticks()],fontsize=22)
-        ax.set_ylabel(r'$\epsilon$(top)',fontsize=22,ha='right',va='bottom',position=(0,1))
-        ax.set_yticklabels(['']+["{0:.1f}".format(i) for i in ax.get_yticks()[1:-1]]+[''],fontsize=22)
+        ax.set_xlabel(r'$\epsilon$(anti-top)',ha='right',va='top',position=(1,0))
+        ax.set_ylabel(r'$\epsilon$(top)',ha='right',va='bottom',position=(0,1))
 
         ## CMS/COM Energy Label
         cms_stamp = hpl.CMSStamp(self.CMSlabelStatus)
@@ -418,15 +406,15 @@ b = list(itertools.combinations(a,2))
         ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
                 fontsize=energy_stamp.fontsize,ha=energy_stamp.ha, va=energy_stamp.va, transform=ax.transAxes)
 
-        text_args = {'ha':'left','va':'top','fontsize':18,'transform':ax.transAxes}
-        if self.processlabel: ax.text(0.03,0.82,self.processlabel,**text_args)
-        if accuracy: ax.text(0.03,0.75,r"Accuracy = {0:.2f}$\pm${1:.2f}".format(accuracy['mean'],accuracy['std']),**text_args)
+        if self.processlabel: 
+            ax.text(0.03,0.82,self.processlabel)
+        if accuracy:
+            ax.text(0.03,0.75,r"Accuracy = {0:.2f}$\pm${1:.2f}".format(accuracy['mean'],accuracy['std']))
 
-        leg = ax.legend(loc=4,numpoints=1,fontsize=12,ncol=1,columnspacing=0.3)
+        leg = ax.legend()
         leg.draw_frame(False)
 
-        plt.savefig('{0}.{1}'.format(saveAs,self.image_format),
-                    format=self.image_format,bbox_inches='tight',dpi=300)
+        plt.savefig('{0}.{1}'.format(saveAs,self.image_format))
         plt.close()
 
         return
@@ -499,9 +487,89 @@ b = list(itertools.combinations(a,2))
         return
 
 
+    def getSeparations(self):
+        """Calculate separations between classes for each feature"""
+        self.separations = {}
+
+        # One dimensional separations
+        for target in self.target_pairs:
+            target_a = [i for i in self.targets if i.name==target[0]][0]
+            target_b = [i for i in self.targets if i.name==target[1]][0]
+
+            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
+            fcsv = open("{0}.csv".format(saveAs),"w")
+
+            for feature in self.listOfFeatures:
+
+                # bin the data to make separation calculation simple
+                data_a,_ = np.histogram(target_a.df[feature],normed=True,
+                                        bins=self.variable_labels[feature].binning)
+                data_b,_ = np.histogram(target_b.df[feature],normed=True,
+                                        bins=self.variable_labels[feature].binning)
+
+                separation = util.getSeparation(data_a,data_b)
+                self.separations[feature]['-'.join(target)] = separation
+
+                # Save separation info to CSV file
+                fcsv.write("{0},{1}".format(feature,separation))
+            fcsv.close() 
+
+
+            # Two dimensional separations
+            saveAs = "{0}/separations2D_{1}-{2}_{3}".format(self.output_dir,target_a,target_b,self.date)
+            fcsv   = open("{0}.csv".format(saveAs),"w")
+
+            for featurepairs in self.listOfFeaturePairs:
+                feature_x = featurepairs[0]
+                feature_y = featurepairs[1]
+
+                binning_x = self.variable_labels[feature_x].binning
+                binning_y = self.variable_labels[feature_y].binning
+
+                # bin the data to make separation calculation simple
+                data_a,_,_ = np.hist2d(target_a.df[feature_x],target_a.df[feature_y],
+                                       bins=[binning_x,binning_y],normed=True)
+                data_b,_,_ = np.hist2d(target_b.df[feature_x],target_b.df[feature_y],
+                                       bins=[binning_x,binning_y],normed=True)
+
+                separation = util.getSeparation2D(data_a,data_b)
+                self.separations['-'.join(featurepairs)]['-'.join(target)] = separation
+
+                # Save separation info to CSV file
+                fcsv.write("{0},{1},{2}".format(feature_x,feature_y,separation))
+            fcsv.close() 
+
+        return
+
+
+
     def model(self,model,name):
         """Plot the model architecture to view later"""
         keras_plot(model,to_file='{0}/{1}_model.eps'.format(self.output_dir,name),show_shapes=True)
         return
+
+
+    def stamp_energy(self,axis):
+        energy_stamp    = hpl.EnergyStamp()
+        energy_stamp.ha = 'right'
+        energy_stamp.coords = [0.99,1.00]
+        energy_stamp.fontsize = 16
+        energy_stamp.va = 'bottom'
+        ax.text(energy_stamp.coords[0],energy_stamp.coords[1],energy_stamp.text, 
+                fontsize=energy_stamp.fontsize,ha=energy_stamp.ha,va=energy_stamp.va,
+                transform=axis.transAxes)
+
+        return
+
+    def stamp_cms(self,axis):
+        cms_stamp = hpl.CMSStamp(self.CMSlabelStatus)
+        cms_stamp.coords = [0.02,1.00]
+        cms_stamp.fontsize = 16
+        cms_stamp.va = 'bottom'
+        ax.text(0.02,1.00,cms_stamp.text,fontsize=cms_stamp.fontsize,
+                ha=cms_stamp.ha,va=cms_stamp.va,transform=axis.transAxes)
+
+        return
+
 
 ## THE END ##
