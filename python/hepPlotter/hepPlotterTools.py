@@ -11,7 +11,6 @@ Simple functions to help with basic plots.
 """
 import ROOT
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def betterColors():
@@ -92,6 +91,30 @@ def getSampleType(name):
     return sampletype
 
 
+def getDataStructure(h_data):
+    """
+    Find the data structure determining the appropriate color scheme.
+    Only call if the self.colormap attribute is None.
+
+    @param h_data    The histogram data
+    @param colorMap  Current choice for colormap
+    """
+    max_value = max(h_data)
+    min_value = min(h_data)
+
+    ## linear (same sign)
+    if max_value*min_value > 0:
+        if max_value>0:
+            colormap = "Reds"    # positive values
+        else:
+            colormap = "Blues"   # negative values
+    ## diverging
+    else:
+        colormap = "bwr"         # blue2red map
+
+    return colormap
+
+
 def hist1d(nbins,bin_low,bin_high):
     """
     Set the binning for each histogram.
@@ -104,15 +127,28 @@ def hist1d(nbins,bin_low,bin_high):
     return arr
 
 
+
+
+class Data(object):
+    def __init__(self):
+        """Store data for plotting (collection of arrays) in a class"""
+        self.data   = None
+        self.error  = None
+        self.bins   = None
+        self.center = None
+        self.width  = None
+
+
 def data2list(data,weights=None,normed=False,binning=1):
     """Convert array of data into dictionary of information matching 'hist2list' """
     data,bins = np.histogram(data,bins=binning,weights=weights,normed=normed)
 
-    results = {'data': data,
-               'error':np.sqrt(data),
-               'bins': bins,
-               'center':0.5*(bins[:-1]+bins[1:]),
-               'width': 0.5*(bins[:-1]-bins[1:])}
+    results = Data()
+    results.data   = data
+    results.error  = np.sqrt(data)
+    results.bins   = bins
+    results.center = 0.5*(bins[:-1]+bins[1:])
+    results.width  = 0.5*(bins[:-1]-bins[1:])
 
     return results
 
@@ -122,10 +158,10 @@ def data2list2D(data,weights=None,normed=False,binning=1):
     try:
         x = data['x']
         y = data['y']
-    except:
+    except TypeError:
         x = data[0]
         y = data[1]
-    _,bins_x,bins_y = np.histogram2d(x, y, bins=binning,normed=normed,weights=weights)
+    data,bins_x,bins_y = np.histogram2d(x, y, bins=binning,normed=normed,weights=weights)
 
     binnsx = []
     binnsy = []
@@ -134,15 +170,13 @@ def data2list2D(data,weights=None,normed=False,binning=1):
             binnsx.append(x)
             binnsy.append(y)
 
-    results = {'data':  weights,
-               'error': np.sqrt(weights),
-               'bins':  {'x':bins_x,'y':bins_y},
-               'center':{'x':binnsx,
-                         'y':binnsy},
-               'width': {'x':0.5*(bins_x[:-1]-bins_x[1:]),
-                         'y':0.5*(bins_y[:-1]-bins_y[1:])}}
-
-    print results
+    results = Data()
+    results.data   = data
+    results.error  = np.sqrt(data)
+    results.bins   = {'x':bins_x,'y':bins_y}
+    results.center = {'x':binnsx,'y':binnsy}
+    results.width  = {'x':0.5*(bins_x[:-1]-bins_x[1:]),
+                      'y':0.5*(bins_y[:-1]-bins_y[1:])}}
 
     return results
 
@@ -152,11 +186,6 @@ def hist2list(histo,name='',normed=False,reBin=1):
     if not histo.GetSumw2N():
         histo.Sumw2()
 
-    bin_center  = []
-    bin_content = []
-    bin_error   = [] # just stat. uncertainty (symmetric)
-    binwidth    = []
-
     if normed:
         histo.Scale(1./histo.Integral());
 
@@ -164,24 +193,28 @@ def hist2list(histo,name='',normed=False,reBin=1):
         histo.Rebin(reBin)
     except TypeError:
         newname = histo.GetName()+"_"+name
-        histo.Rebin( len(reBin)-1,newname,reBin)
+        histo.Rebin(len(reBin)-1,newname,reBin)
         histo = ROOT.gROOT.FindObject( newname )
 
+    bin_centers  = []
+    bin_contents = []
+    bin_errors   = []
+    bin_widths   = []
+    bin_edges    = [histo.GetXaxis().GetBinLowEdge(1)]
 
-    binns = [histo.GetXaxis().GetBinLowEdge(1)]
-    # do one for loop instead of multiple list comprehensions
     for i in xrange(1,histo.GetNbinsX()+1):
-        binns.append(histo.GetXaxis().GetBinUpEdge(i))
-        bin_center.append(histo.GetBinCenter(i))
-        bin_content.append(histo.GetBinContent(i))
-        bin_error.append(histo.GetBinError(i))
-        binwidth.append(histo.GetXaxis().GetBinWidth(i)/2.)
+        bin_edges.append(histo.GetXaxis().GetBinUpEdge(i))
+        bin_centers.append(histo.GetBinCenter(i))
+        bin_contents.append(histo.GetBinContent(i))
+        bin_errors.append(histo.GetBinError(i))
+        bin_widths.append(histo.GetXaxis().GetBinWidth(i)/2.)
 
-    results = {'data': np.array(bin_content),
-               'error':np.array(bin_error),
-               'bins': binns,
-               'center':bin_center,
-               'width': binwidth}
+    results = Data()
+    results.data   = np.array(bin_contents)
+    results.error  = np.array(bin_errors)
+    results.bins   = bin_edges
+    results.center = bin_centers
+    results.width  = bin_widths
 
     return results
 
@@ -191,11 +224,6 @@ def hist2list2D(histo,name='',reBin=None,normed=False):
     """Convert ROOT histogram to list for 2D plots."""
     if not histo.GetSumw2N():
         histo.Sumw2()
-
-    bin_center  = {'x':[],'y':[]}
-    bin_content = []
-    bin_error   = [] # just stat. uncertainty (symmetric)
-    binwidth    = {'x':[],'y':[]}
 
     if normed:
         histo.Scale(1./histo.Integral())
@@ -217,27 +245,33 @@ def hist2list2D(histo,name='',reBin=None,normed=False):
                 for j in xrange(1,yaxis.GetNbins()):
                     histo.Fill(xaxis.GetBinCenter(i),yaxis.GetBinCenter(j),old_histo.GetBinContent(i,j) )
 
-    binns = {'x':[histo.GetXaxis().GetBinLowEdge(1)],\
-             'y':[histo.GetYaxis().GetBinLowEdge(1)]}
-    # do one for loop instead of multiple list comprehensions
-    binns['x']+=[histo.GetXaxis().GetBinUpEdge(i) for i in xrange(1,histo.GetNbinsX()+1)]
-    binns['y']+=[histo.GetYaxis().GetBinUpEdge(j) for j in xrange(1,histo.GetNbinsY()+1)]
+    bin_centers  = {'x':[],'y':[]}
+    bin_contents = []
+    bin_errors   = []
+    bin_widths   = {'x':[],'y':[]}
+    bin_edges = {'x':[histo.GetXaxis().GetBinLowEdge(1)],\
+                 'y':[histo.GetYaxis().GetBinLowEdge(1)]}
+
+    bin_edges['x']+=[histo.GetXaxis().GetBinUpEdge(i) for i in xrange(1,histo.GetNbinsX()+1)]
+    bin_edges['y']+=[histo.GetYaxis().GetBinUpEdge(j) for j in xrange(1,histo.GetNbinsY()+1)]
+
     for i in xrange(1,histo.GetNbinsX()+1):
         for j in xrange(1,histo.GetNbinsY()+1):
-            bin_center['x'].append(histo.GetXaxis().GetBinCenter(i))
-            bin_center['y'].append(histo.GetYaxis().GetBinCenter(j))
+            bin_centers['x'].append(histo.GetXaxis().GetBinCenter(i))
+            bin_centers['y'].append(histo.GetYaxis().GetBinCenter(j))
 
-            bin_content.append(histo.GetBinContent(i,j))
-            bin_error.append(histo.GetBinError(i,j))
+            bin_contents.append(histo.GetBinContent(i,j))
+            bin_errors.append(histo.GetBinError(i,j))
 
-            binwidth['x'].append(histo.GetXaxis().GetBinWidth(i)/2.)
-            binwidth['y'].append(histo.GetYaxis().GetBinWidth(i)/2.)
+            bin_widths['x'].append(histo.GetXaxis().GetBinWidth(i)/2.)
+            bin_widths['y'].append(histo.GetYaxis().GetBinWidth(i)/2.)
 
-    results = {'data': np.array(bin_content),
-               'error':np.array(bin_error),
-               'bins': binns,
-               'center':bin_center,
-               'width': binwidth}
+    results = Data()
+    results.data   = np.array(bin_contents)
+    results.error  = np.array(bin_errors)
+    results.bins   = bin_edges
+    results.center = bin_centers
+    results.width  = bin_widths
 
     return results
 
@@ -247,25 +281,27 @@ def TEfficiency2list(histo):
     """Convert TEfficiency to lists.  Return dictionary of lists"""
     h_histo  = histo.GetPassedHistogram()
 
-    h_eff    = []
-    h_eff_up = []
-    h_eff_dn = []
-    h_eff_mp = []
-    binwidth = []
-    binns = [h_histo.GetXaxis().GetBinLowEdge(1)]
-    for i in xrange(1,h_histo.GetNbinsX()+1):
-        h_eff.append(histo.GetEfficiency(i))
-        h_eff_up.append(histo.GetEfficiencyErrorUp(i))
-        h_eff_dn.append(histo.GetEfficiencyErrorLow(i))
-        h_eff_mp.append(h_histo.GetXaxis().GetBinCenter(i))
-        binns.append(h_histo.GetXaxis().GetBinUpEdge(i))
-        binwidth.append(h_histo.GetXaxis().GetBinWidth(1)/2.)
+    bin_contents  = []
+    bin_errors_up = []
+    bin_errors_dn = []
+    bin_centers   = []
+    bin_widths    = []
+    bin_edges     = [h_histo.GetXaxis().GetBinLowEdge(1)]
 
-    results  = {'data': np.array(h_eff),
-                'error':[h_eff_dn,h_eff_up],
-                'bins': binns,
-                'center':h_eff_mp,
-                'width': binwidth}
+    for i in xrange(1,h_histo.GetNbinsX()+1):
+        bin_contents.append(histo.GetEfficiency(i))
+        bin_errors_up.append(histo.GetEfficiencyErrorUp(i))
+        bin_errors_dn.append(histo.GetEfficiencyErrorLow(i))
+        bin_centers.append(h_histo.GetXaxis().GetBinCenter(i))
+        bin_edges.append(h_histo.GetXaxis().GetBinUpEdge(i))
+        bin_widths.append(h_histo.GetXaxis().GetBinWidth(1)/2.)
+
+    results = Data()
+    results.data   = np.array(bin_contents)
+    results.error  = [bin_errors_dn,bin_errors_up]
+    results.bins   = bin_edges
+    results.center = h_eff_mp
+    results.width  = bin_widths
 
     return results
 
@@ -275,60 +311,37 @@ def TEfficiency2list2D(histo):
     """Convert 2D TEfficiency to lists"""
     h_histo  = histo.GetPassedHistogram()
 
-    bin_center   = {'x':[],'y':[]}
-    bin_content  = []
-    bin_error_up = [] # eff uncertainty up   -- not necessarily symmetric
-    bin_error_dn = [] # eff uncertainty down
-    binwidth     = {'x':[],'y':[]}
+    bin_centers   = {'x':[],'y':[]}
+    bin_contents  = []
+    bin_error_ups = [] # eff uncertainty up
+    bin_error_dns = [] # eff uncertainty down
+    bin_widths    = {'x':[],'y':[]}
 
     binns = {'x':[h_histo.GetXaxis().GetBinLowEdge(1)],\
              'y':[h_histo.GetYaxis().GetBinLowEdge(1)]}
-    # do one for loop instead of multiple list comprehensions
-    binns['x']+=[h_histo.GetXaxis().GetBinUpEdge(i) for i in xrange(1,h_histo.GetNbinsX()+1)]
-    binns['y']+=[h_histo.GetYaxis().GetBinUpEdge(j) for j in xrange(1,h_histo.GetNbinsY()+1)]
+    bin_edges['x']+=[h_histo.GetXaxis().GetBinUpEdge(i) for i in xrange(1,h_histo.GetNbinsX()+1)]
+    bin_edges['y']+=[h_histo.GetYaxis().GetBinUpEdge(j) for j in xrange(1,h_histo.GetNbinsY()+1)]
+
     for i in xrange(1,h_histo.GetNbinsX()+1):
         for j in xrange(1,h_histo.GetNbinsY()+1):
             bin_center['x'].append(h_histo.GetXaxis().GetBinCenter(i))
             bin_center['y'].append(h_histo.GetYaxis().GetBinCenter(j))
 
             this_bin = histo.GetGlobalBin(i,j)
-            bin_content.append(histo.GetEfficiency(this_bin))
-            bin_error_up.append(histo.GetEfficiencyErrorUp(this_bin))
-            bin_error_dn.append(histo.GetEfficiencyErrorLow(this_bin))
-            binwidth['x'].append(h_histo.GetXaxis().GetBinWidth(1)/2.)
-            binwidth['y'].append(h_histo.GetYaxis().GetBinWidth(1)/2.)
+            bin_contents.append(histo.GetEfficiency(this_bin))
+            bin_error_ups.append(histo.GetEfficiencyErrorUp(this_bin))
+            bin_error_dns.append(histo.GetEfficiencyErrorLow(this_bin))
+            bin_widths['x'].append(h_histo.GetXaxis().GetBinWidth(1)/2.)
+            bin_widths['y'].append(h_histo.GetYaxis().GetBinWidth(1)/2.)
 
-    results  = {'data': np.array(bin_content),
-                'error':[bin_error_up,bin_error_dn],
-                'bins': binns,
-                'center':bin_center,
-                'width': binwidth}
+    results = Data()
+    results.data   = np.array(bin_contents)
+    results.error  = [np.array(bin_error_dns),np.array(bin_error_ups)]
+    results.bins   = bin_edges
+    results.center = bin_centers
+    results.width  = bin_widths
 
     return results
-
-
-def getDataStructure(h_data):
-    """
-    Find the data structure determining the appropriate color scheme.
-    Only call if the self.colormap attribute is None.
-
-    @param h_data    The histogram data
-    @param colorMap  Current choice for colormap
-    """
-    max_value = max(h_data)
-    min_value = min(h_data)
-
-    ## linear (same sign)
-    if max_value*min_value > 0:
-        if max_value>0:
-            colormap = plt.cm.Reds    # positive values
-        else:
-            colormap = plt.cm.Blues   # negative values
-    ## diverging
-    else:
-        colormap = plt.cm.bwr         # blue2red map
-
-    return colormap
 
 
 ## THE END
