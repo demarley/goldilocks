@@ -180,27 +180,18 @@ class EnergyStamp(Text):
     def __init__(self):
         Text.__init__(self)
         self.text = r"$\sqrt{\text{s}}$ = 13 TeV"
-        self.fontsize = 18
-        self.ha = 'left'
-        self.va = 'top'
 
 class LumiStamp(Text):
     """Class for writing luminosity on plot"""
     def __init__(self,lumi="36.1"):
         Text.__init__(self)
         self.text = r"%s fb$^{\text{-1}}$"%(lumi)
-        self.fontsize = 18
-        self.ha = 'left'
-        self.va = 'top'
 
 class CMSStamp(Text):
     """Class for writing official CMS name & plot type (Simulation, Internal, etc.) on plot"""
     def __init__(self,label_status="Internal"):
         Text.__init__(self)
         self.text = r"\textbf{CMS} {\Large \textit{%s}}"%(label_status)    # CMS style
-        self.fontsize = 18
-        self.ha = 'left'
-        self.va = 'top'
 
 
 

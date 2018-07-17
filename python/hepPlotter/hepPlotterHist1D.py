@@ -160,17 +160,17 @@ class HepPlotterHist1D(HepPlotter):
             # Changing legend for step histograms -> a line instead of a rectangle
             this_label = None
             _ = axis.plot([],[],
-                              color=data2plot.linecolor,lw=data2plot.linewidth,
-                              ls=data2plot.linestyle,label=data2plot.label)
+                          color=data2plot.linecolor,lw=data2plot.linewidth,
+                          ls=data2plot.linestyle,label=data2plot.label)
 
         # Make the histogram
         data,b,p = axis.hist(bin_center,bins=binning,weights=data,
-                                 label=this_label,stacked=self.stacked,
-                                 lw=histogram.linewidth,histtype=data2plot.draw_type,
-                                 ls=histogram.linestyle,
-                                 color=histogram.color,
-                                 edgecolor=histogram.edgecolor,
-                                 **kwargs)
+                             label=this_label,stacked=self.stacked,
+                             lw=histogram.linewidth,histtype=data2plot.draw_type,
+                             ls=histogram.linestyle,
+                             color=histogram.color,
+                             edgecolor=histogram.edgecolor,
+                             **kwargs)
 
         if self.logplot["y"]: axis.set_yscale('log')
         if self.logplot["x"]: axis.set_xscale('log')
