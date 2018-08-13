@@ -79,17 +79,17 @@ int main(int argc, char** argv) {
     unsigned int numberOfFiles(filenames.size());
     unsigned int currentFileNumber(0);
 
-    cma::INFO("TRAINING : *** Starting file loop *** ");
+    cma::INFO("RUNML : *** Starting file loop *** ");
     for (const auto& filename : filenames) {
 
         ++currentFileNumber;
-        cma::INFO("TRAINING :   Opening "+filename+"   ("+std::to_string(currentFileNumber)+"/"+std::to_string(numberOfFiles)+")");
+        cma::INFO("RUNML :   Opening "+filename+"   ("+std::to_string(currentFileNumber)+"/"+std::to_string(numberOfFiles)+")");
 
         auto file = TFile::Open(filename.c_str());
         if (!file || file->IsZombie()){
-            cma::WARNING("TRAINING :  -- File: "+filename);
-            cma::WARNING("TRAINING :     does not exist or it is a Zombie. ");
-            cma::WARNING("TRAINING :     Continuing to next file. ");
+            cma::WARNING("RUNML :  -- File: "+filename);
+            cma::WARNING("RUNML :     does not exist or it is a Zombie. ");
+            cma::WARNING("RUNML :     Continuing to next file. ");
             continue;
         }
 
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
         std::vector<std::string> fileKeys;
         cma::getListOfKeys(file,fileKeys);
         if (std::find(fileKeys.begin(), fileKeys.end(), treename) == fileKeys.end()){
-            cma::INFO("TRAINING : TTree "+treename+" is not present in this file, continuing to next TTree");
+            cma::INFO("RUNML : TTree "+treename+" is not present in this file, continuing to next TTree");
             continue;
         }
 
@@ -114,15 +114,12 @@ int main(int argc, char** argv) {
         std::string outputFilename     = cma::setupOutputFile(outpath,filename);
         std::string fullOutputFilename = outpath+"/"+outputFilename+".root";
         std::unique_ptr<TFile> outputFile(TFile::Open( fullOutputFilename.c_str(), "RECREATE"));
-        cma::INFO("TRAINING :   >> Saving to "+fullOutputFilename);
+        cma::INFO("RUNML :   >> Saving to "+fullOutputFilename);
 
 
         // -- Load TTree to loop over
-        cma::INFO("TRAINING :      TTree "+treename);
+        cma::INFO("RUNML :      TTree "+treename);
         TTreeReader myReader(treename.c_str(), file);
-
-        // -- Setup cutflow histograms
-        evtSel.setCutflowHistograms(*outputFile);
 
         // -- Initialize histograms
         histogrammer4ML histMaker(config,"ML");
@@ -153,28 +150,28 @@ int main(int argc, char** argv) {
         while (myReader.Next()) {
 
             if (eventCounter+1 > numberOfEventsToRun){
-                cma::INFO("TRAINING : Processed the desired number of events: "+std::to_string(eventCounter)+"/"+std::to_string(numberOfEventsToRun));
+                cma::INFO("RUNML : Processed the desired number of events: "+std::to_string(eventCounter)+"/"+std::to_string(numberOfEventsToRun));
                 break;
             }
 
             if (entry%imod==0){
-                cma::INFO("TRAINING :       Processing event "+std::to_string(entry) );
+                cma::INFO("RUNML :       Processing event "+std::to_string(entry) );
                 if(imod<2e4) imod *=10;
             }
 
             // -- Build Event -- //
-            cma::DEBUG("TRAINING : Execute event");
+            cma::DEBUG("RUNML : Execute event");
             event.execute(entry);
             // now we have event object that has the event-level objects in it
             // pass this to the selection tools
 
             // -- Event Selection -- //
-            cma::DEBUG("TRAINING : Apply event selection");
+            cma::DEBUG("RUNML : Apply event selection");
             passEvent = evtSel.applySelection(event);
 
             std::vector<Top> tops = event.ttbar();
             if (passEvent && tops.size()>0){
-                cma::DEBUG("TRAINING : Passed selection, now save information");
+                cma::DEBUG("RUNML : Passed selection, now save information");
 
                 // For ML, we are training on semi-boosted top quarks (AK8+AK4)
                 // Only save features of the AK8+AK4 system to the output ntuple/histograms
@@ -204,8 +201,8 @@ int main(int argc, char** argv) {
         // put overflow/underflow content into the first and last bins
         histMaker.overUnderFlow();
 
-        cma::INFO("TRAINING :   END Running  "+filename);
-        cma::INFO("TRAINING :   >> Output at "+fullOutputFilename);
+        cma::INFO("RUNML :   END Running  "+filename);
+        cma::INFO("RUNML :   >> Output at "+fullOutputFilename);
 
         outputFile->Write();
         outputFile->Close();
@@ -215,8 +212,8 @@ int main(int argc, char** argv) {
         file = ((TFile *)0);  // (no errors for too many root files open)
     } // end file loop
 
-    cma::INFO("TRAINING : *** End of file loop *** ");
-    cma::INFO("TRAINING : Program finished. ");
+    cma::INFO("RUNML : *** End of file loop *** ");
+    cma::INFO("RUNML : Program finished. ");
 }
 
 // THE END

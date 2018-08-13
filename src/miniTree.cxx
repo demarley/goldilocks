@@ -14,7 +14,9 @@ Create and fill TTree for ML
 
 miniTree::miniTree(configuration &cmaConfig) : 
   m_config(&cmaConfig),
-  m_nDeepAK8(16){}
+  m_nDeepAK8(16){
+    m_usePUPPI = m_config->usePUPPI();
+}
 
 miniTree::~miniTree() {}
 
@@ -40,35 +42,47 @@ void miniTree::initialize(TFile& outputFile) {
     // Features
     m_ttree->Branch( "target", &m_target, "target/I" );  // target value (.e.g, 0 or 1)
 
-/*  ORIGINAL -- pre-DEEPAK8
-    m_ttree->Branch( "ljet_SDmass", &m_ljet_SDmass, "ljet_SDmass/F" );
-    m_ttree->Branch( "ljet_tau1",   &m_ljet_tau1,   "ljet_tau1/F" );
-    m_ttree->Branch( "ljet_tau2",   &m_ljet_tau2,   "ljet_tau2/F" );
-    m_ttree->Branch( "ljet_tau3",   &m_ljet_tau3,   "ljet_tau3/F" );
-    m_ttree->Branch( "ljet_tau21",  &m_ljet_tau21,  "ljet_tau21/F" );
-    m_ttree->Branch( "ljet_tau32",  &m_ljet_tau32,  "ljet_tau32/F" );
-    m_ttree->Branch( "ljet_subjet0_bdisc", &m_ljet_subjet0_bdisc, "ljet_subjet0_bdisc/F" );
-    m_ttree->Branch( "ljet_subjet0_pTrel", &m_ljet_subjet0_pTrel, "ljet_subjet0_pTrel/F" );
-    //ljet_subjet0_charge
-    m_ttree->Branch( "ljet_subjet1_bdisc", &m_ljet_subjet1_bdisc, "ljet_subjet1_bdisc/F" );
-    m_ttree->Branch( "ljet_subjet1_pTrel", &m_ljet_subjet1_pTrel, "ljet_subjet1_pTrel/F" );
-    //ljet_subjet1_charge
-*/
-    // AK8
-    m_ljet_deepAK8.resize(m_nDeepAK8);
-    for (unsigned int i=0;i<m_nDeepAK8;i++){
-        m_ljet_deepAK8[i] = 0;
-        std::string idx   = std::to_string(i);
-        m_ttree->Branch( ("ljet_deepAK8_"+idx).c_str(), &m_ljet_deepAK8.at(i), ("ljet_deepAK8_"+idx+"/F").c_str() );
+    if (m_usePUPPI){
+        // High-level -- PUPPI AK8
+        m_ttree->Branch( "AK8_pt",     &m_AK8_pt,     "AK8_pt/F" );
+        m_ttree->Branch( "AK8_SDmass", &m_AK8_SDmass, "AK8_SDmass/F" );
+        m_ttree->Branch( "AK8_tau1",   &m_AK8_tau1,   "AK8_tau1/F" );
+        m_ttree->Branch( "AK8_tau2",   &m_AK8_tau2,   "AK8_tau2/F" );
+        m_ttree->Branch( "AK8_tau3",   &m_AK8_tau3,   "AK8_tau3/F" );
+        m_ttree->Branch( "AK8_tau21",  &m_AK8_tau21,  "AK8_tau21/F" );
+        m_ttree->Branch( "AK8_tau32",  &m_AK8_tau32,  "AK8_tau32/F" );
+        m_ttree->Branch( "AK8_subjet0_bdisc", &m_AK8_subjet0_bdisc, "AK8_subjet0_bdisc/F" );
+        m_ttree->Branch( "AK8_subjet0_pTrel", &m_AK8_subjet0_pTrel, "AK8_subjet0_pTrel/F" );
+        m_ttree->Branch( "AK8_subjet1_bdisc", &m_AK8_subjet1_bdisc, "AK8_subjet1_bdisc/F" );
+        m_ttree->Branch( "AK8_subjet1_pTrel", &m_AK8_subjet1_pTrel, "AK8_subjet1_pTrel/F" );
+    }
+    else{
+        // DeepAK8
+        m_AK8_deepAK8.resize(m_nDeepAK8);
+        for (unsigned int i=0;i<m_nDeepAK8;i++){
+            m_AK8_deepAK8[i] = 0;
+            std::string idx   = std::to_string(i);
+            m_ttree->Branch( ("AK8_deepAK8_"+idx).c_str(), &m_AK8_deepAK8.at(i), ("AK8_deepAK8_"+idx+"/F").c_str() );
+        }
     }
 
     // AK4
-    m_ttree->Branch( "jet_bdisc",  &m_jet_bdisc,  "jet_bdisc/F" );
-    m_ttree->Branch( "jet_charge", &m_jet_charge, "jet_charge/F" );
+    m_ttree->Branch( "AK4_deepCSVb",  &m_AK4_deepCSVb,  "AK4_deepCSVb/F ");
+    m_ttree->Branch( "AK4_deepCSVbb", &m_AK4_deepCSVbb, "AK4_deepCSVbb/F ");
+    m_ttree->Branch( "AK4_deepCSVc",  &m_AK4_deepCSVc,  "AK4_deepCSVc/F ");
+    m_ttree->Branch( "AK4_deepCSVcc", &m_AK4_deepCSVcc, "AK4_deepCSVcc/F ");
+    m_ttree->Branch( "AK4_deepCSVl",  &m_AK4_deepCSVl,  "AK4_deepCSVl/F ");
+    m_ttree->Branch( "AK4_deepFlavorb",   &m_AK4_deepFlavorb,   "AK4_deepFlavorb/F ");
+    m_ttree->Branch( "AK4_deepFlavorbb",  &m_AK4_deepFlavorbb,  "AK4_deepFlavorbb/F ");
+    m_ttree->Branch( "AK4_deepFlavorc",   &m_AK4_deepFlavorc,   "AK4_deepFlavorc/F ");
+    m_ttree->Branch( "AK4_deepFlavoruds", &m_AK4_deepFlavoruds, "AK4_deepFlavoruds/F ");
+    m_ttree->Branch( "AK4_deepFlavorg",   &m_AK4_deepFlavorg,   "AK4_deepFlavorg/F ");
+    m_ttree->Branch( "AK4_deepFlavorlepb",&m_AK4_deepFlavorlepb,"AK4_deepFlavorlepb/F ");
+    m_ttree->Branch( "AK4_charge", &m_AK4_charge, "AK4_charge/F" );
 
     // AK8 + AK4 system
-    m_ttree->Branch( "ljet_jet_m",      &m_ljet_jet_m,      "ljet_jet_m/F" );
-    m_ttree->Branch( "ljet_jet_deltaR", &m_ljet_jet_deltaR, "ljet_jet_deltaR/F" );
+    m_ttree->Branch( "AK8AK4_mass",   &m_AK8AK4_mass,   "AK8AK4_mass/F" );
+    m_ttree->Branch( "AK8AK4_deltaR", &m_AK8AK4_deltaR, "AK8AK4_deltaR/F" );
 
 
     /**** Metadata ****/
@@ -95,30 +109,47 @@ void miniTree::saveEvent(const std::map<std::string,double> features) {
 
     m_target = features.at("target");
 
-    for (unsigned int i=0;i<m_nDeepAK8;i++){
-        m_ljet_deepAK8.at(i) = features.at("ljet_deepAK8_"+std::to_string(i));
+    cma::DEBUG("MINITREE : Save event2a ");
+    m_AK4_deepCSVb  = features.at("AK4_deepCSVb");
+    m_AK4_deepCSVbb = features.at("AK4_deepCSVbb");
+    m_AK4_deepCSVc  = features.at("AK4_deepCSVc");
+    m_AK4_deepCSVcc = features.at("AK4_deepCSVcc");
+    m_AK4_deepCSVl  = features.at("AK4_deepCSVl");
+
+    cma::DEBUG("MINITREE : Save event2b ");
+    m_AK4_deepFlavorb  = features.at("AK4_deepFlavorb");
+    m_AK4_deepFlavorbb = features.at("AK4_deepFlavorbb");
+    m_AK4_deepFlavorc  = features.at("AK4_deepFlavorc");
+    m_AK4_deepFlavorg  = features.at("AK4_deepFlavorg");
+    m_AK4_deepFlavoruds  = features.at("AK4_deepFlavoruds");
+    m_AK4_deepFlavorlepb = features.at("AK4_deepFlavorlepb");
+
+    m_AK4_charge = features.at("AK4_charge");
+
+    if (m_usePUPPI){
+        cma::DEBUG("MINITREE : Save event4 ");
+        m_AK8_pt     = features.at("AK8_pt");
+        m_AK8_SDmass = features.at("AK8_SDmass");
+        m_AK8_tau1   = features.at("AK8_tau1");
+        m_AK8_tau2   = features.at("AK8_tau2");
+        m_AK8_tau3   = features.at("AK8_tau3");
+        m_AK8_tau21  = features.at("AK8_tau21");
+        m_AK8_tau32  = features.at("AK8_tau32");
+        m_AK8_subjet0_bdisc = features.at("AK8_subjet0_bdisc");
+        m_AK8_subjet0_pTrel = features.at("AK8_subjet0_pTrel");
+        m_AK8_subjet1_bdisc = features.at("AK8_subjet1_bdisc");
+        m_AK8_subjet1_pTrel = features.at("AK8_subjet1_pTrel");
+    }
+    else{
+        cma::DEBUG("MINITREE : Save event3 ");
+        for (unsigned int i=0;i<m_nDeepAK8;i++){
+            m_AK8_deepAK8.at(i) = features.at("AK8_deepAK8_"+std::to_string(i));
+        }
     }
 
-    m_jet_bdisc  = features.at("jet_bdisc");
-    m_jet_charge = features.at("jet_charge");
-
-    m_ljet_jet_m      = features.at("ljet_jet_m");
-    m_ljet_jet_deltaR = features.at("ljet_jet_deltaR");
-
-
-/*
-    m_ljet_SDmass = features.at("ljet_SDmass");
-    m_ljet_tau1   = features.at("ljet_tau1");
-    m_ljet_tau2   = features.at("ljet_tau2");
-    m_ljet_tau3   = features.at("ljet_tau3");
-    m_ljet_tau21  = features.at("ljet_tau21");
-    m_ljet_tau32  = features.at("ljet_tau32");
-    m_ljet_subjet0_bdisc = features.at("ljet_subjet0_bdisc");
-    m_ljet_subjet0_pTrel = features.at("ljet_subjet0_pTrel");
-    m_ljet_subjet1_bdisc = features.at("ljet_subjet1_bdisc");
-    m_ljet_subjet1_pTrel = features.at("ljet_subjet1_pTrel");
-*/
-
+    cma::DEBUG("MINITREE : Save event5 ");
+    m_AK8AK4_mass   = features.at("AK8AK4_mass");
+    m_AK8AK4_deltaR = features.at("AK8AK4_deltaR");
 
     /**** Fill the tree ****/
     cma::DEBUG("MINITREE : Fill the tree");

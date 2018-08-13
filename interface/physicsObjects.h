@@ -61,17 +61,6 @@ struct TruthTop {
 
 
 // Reco information
-struct Tjet : CmaBase {
-    // extra track jet attributes
-    float mv2c10;
-    float mv2c20;
-    std::map<std::string, char> isbtagged;
-    float jvt;
-    double charge;
-    int numConstituents;
-    int true_flavor;
-};
-
 struct Jet : CmaBase {
     // extra jet attributes
     float bdisc;
@@ -86,6 +75,19 @@ struct Jet : CmaBase {
     int containment; // level of containment for partons
     std::vector<int> truth_partons;  // vector containing partons that are truth-matched to jet
     int matchId;    // keep track of jets matched to top or anti-top
+
+    float deepCSVb;
+    float deepCSVbb;
+    float deepCSVc;
+    float deepCSVcc;
+    float deepCSVl;
+
+    float deepFlavorb;
+    float deepFlavorbb;
+    float deepFlavorc;
+    float deepFlavoruds;
+    float deepFlavorg;
+    float deepFlavorlepb;
 };
 
 struct Ljet : Jet {
@@ -98,27 +100,16 @@ struct Ljet : Jet {
     float tau21;
     float tau32;
 
+    double deepAK8top;
+    double deepAK8W;
+    double deepAK8Z;
+    double deepAK8Zbb;
+    double deepAK8Hbb;
+    double deepAK8H4q;
     std::vector<double> deepAK8; // deepAK8 raw scores
     std::vector<Jet> subjets;    // soft-drop subjets
 };
 
-struct Lepton : CmaBase {
-    // extra lepton attributes
-    int charge;
-    bool isElectron;
-    bool isMuon;
-    float Iso;
-    int index;       // index in vector of leptons
-};
-
-struct Neutrino : CmaBase {
-    // neutrino attributes
-};
-
-struct MET : CmaBase{
-    // extra MET attributs
-    float mtw;   // transverse mass of W
-};
 
 
 struct Top {
@@ -132,10 +123,6 @@ struct Top {
 
     // contains all associated jets (hadronic or leptonic)
     std::vector<int> jets;  
-
-    // leptonically-decaying top quark
-    Lepton lepton;
-    Neutrino neutrino;
 
     // hadronically-decaying top quark
     int ljet;               // large-R jet

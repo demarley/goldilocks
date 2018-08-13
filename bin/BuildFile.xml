@@ -7,6 +7,9 @@
 <bin   name="training" file="training.cxx">
 </bin>
 
+<bin   name="inference" file="inference.cxx">
+</bin>
+
 
 <Flags CXXFLAGS="-lLHAPDF -lMinuit -lTreePlayer -fopenmp -Wno-error=unused-but-set-variable -Wno-error=unused-variable -Wno-error=maybe-uninitialized"/>
 <!--  some things appear as errors that shouldn't (or I don't see a way to 'fix' them) -->

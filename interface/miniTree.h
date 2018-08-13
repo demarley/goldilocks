@@ -48,6 +48,8 @@ class miniTree {
     TTree * m_metadataTree;
     configuration * m_config;
 
+    bool m_usePUPPI;
+
     /**** Training branches ****/
     // weights for inputs
     float m_xsection;
@@ -60,27 +62,38 @@ class miniTree {
     unsigned int m_target;
 
     unsigned int m_nDeepAK8;
-    std::vector<float> m_ljet_deepAK8;
+    std::vector<float> m_AK8_deepAK8;
 
-    float m_ljet_SDmass;
-    float m_ljet_tau1;
-    float m_ljet_tau2;
-    float m_ljet_tau3;
-    float m_ljet_tau21;
-    float m_ljet_tau32;
+    float m_AK8_pt;
+    float m_AK8_SDmass;
+    float m_AK8_tau1;
+    float m_AK8_tau2;
+    float m_AK8_tau3;
+    float m_AK8_tau21;
+    float m_AK8_tau32;
+    float m_AK8_subjet0_bdisc;
+    float m_AK8_subjet0_pTrel;
+    float m_AK8_subjet0_charge;
+    float m_AK8_subjet1_bdisc;
+    float m_AK8_subjet1_pTrel;
+    float m_AK8_subjet1_charge;
 
-    float m_ljet_subjet0_bdisc;
-    float m_ljet_subjet0_pTrel;
-    float m_ljet_subjet0_charge;
-    float m_ljet_subjet1_bdisc;
-    float m_ljet_subjet1_pTrel;
-    float m_ljet_subjet1_charge;
+    float m_AK4_deepCSVb;
+    float m_AK4_deepCSVbb;
+    float m_AK4_deepCSVc;
+    float m_AK4_deepCSVcc;
+    float m_AK4_deepCSVl;
+    float m_AK4_deepFlavorb;
+    float m_AK4_deepFlavorbb;
+    float m_AK4_deepFlavorc;
+    float m_AK4_deepFlavoruds;
+    float m_AK4_deepFlavorg;
+    float m_AK4_deepFlavorlepb;
 
-    float m_jet_bdisc;
-    float m_jet_charge;
+    float m_AK4_charge;
 
-    float m_ljet_jet_m;
-    float m_ljet_jet_deltaR;
+    float m_AK8AK4_mass;
+    float m_AK8AK4_deltaR;
 
     /**** Metadata ****/
     // which sample has which target value

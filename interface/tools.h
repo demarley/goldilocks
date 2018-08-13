@@ -61,10 +61,6 @@ namespace cma{
     template<typename T>
     std::vector<T> compareVectors( std::vector<T> v1, std::vector<T> v2);
 
-    /* Random seed for dilepton ttbar reconstruction */
-    unsigned int setRandomNumberSeeds(const Lepton& lepton, const Lepton& antiLepton, 
-                                      const Jet& jet1, const Jet& jet2);
-
     /* DeltaR matching of TLorentzVectors (default deltaR=0.75) */
     bool deltaRMatch( const TLorentzVector &particle1, const TLorentzVector &particle2, const double deltaR=0.75 );
 

@@ -1,0 +1,14 @@
+eos_path /store/user/demarley/susy/semi-resolved-tagging/goldilocks/ttbar_top
+subdir ttbar_top
+eos_tarball_path /store/user/demarley/susy/semi-resolved-tagging/goldilocks/
+date today
+output_dir eos
+username demarley
+executable run
+test False
+submit True
+verbose True
+config config/training.txt
+files config/TTJets_SingleLeptFromT_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
+#files config/TTJets_SingleLeptFromTbar_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
+#files config/TTJets_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt

@@ -16,10 +16,8 @@ histogrammer::histogrammer( configuration& cmaConfig, std::string name ) :
   m_config(&cmaConfig),
   m_name(name),
   m_isMC(false),
-  m_doSystWeights(false),
   m_useLargeRJets(false),
   m_useJets(false),
-  m_useLeptons(false),
   m_putOverflowInLastBin(true),
   m_putUnderflowInFirstBin(true){
     m_map_histograms1D.clear();
@@ -30,7 +28,6 @@ histogrammer::histogrammer( configuration& cmaConfig, std::string name ) :
 
     m_useLargeRJets = m_config->useLargeRJets();
     m_useJets       = m_config->useJets();
-    m_useLeptons    = m_config->useLeptons();
 
     if (m_name.length()>0  && m_name.substr(m_name.length()-1,1).compare("_")!=0)
         m_name = m_name+"_"; // add '_' to end of string, if needed
@@ -106,15 +103,7 @@ void histogrammer::initialize( TFile& outputFile, bool doSystWeights ){
     m_mapContainment    = m_config->mapOfPartonContainment();
     m_mapContainmentRev = m_config->mapOfPartonContainmentRev();
 
-    // loop over treenames (typically systematic uncertainties)
-    for (auto& treename : m_config->treeNames() ){
-        std::size_t found = treename.find("/");   // protection against directory structure
-        if (found!=std::string::npos){
-            treename = treename.substr(found+1);
-        }
-
-        bookHists( m_name+treename );
-    }
+    bookHists( m_name+m_config->treename() );
 
     return;
 }
@@ -129,75 +118,53 @@ void histogrammer::bookHists( std::string name ){
 
     cma::DEBUG("HISTOGRAMMER : Init. histograms: "+name);
 
-    if (m_useLargeRJets){
-        for (const auto& c : m_containments){
-            std::string cname = c+"_"+name;
-            init_hist("ljet_pt_"+cname,     2000,  0.0, 2000.0);
-            init_hist("ljet_eta_"+cname,      50, -2.5,    2.5);
-            init_hist("ljet_phi_"+cname,      64, -3.2,    3.2);
-            init_hist("ljet_SDmass_"+cname,  500,  0.0,  500.0);
-            init_hist("ljet_tau1_"+cname,    200,  0.0,    2.0);
-            init_hist("ljet_tau2_"+cname,    200,  0.0,    2.0);
-            init_hist("ljet_tau3_"+cname,    200,  0.0,    2.0);
-            init_hist("ljet_tau21_"+cname,   100,  0.0,    1.0);
-            init_hist("ljet_tau32_"+cname,   100,  0.0,    1.0);
-            init_hist("ljet_subjet0_btag_"+cname, 100, 0.0, 1.0);
-            init_hist("ljet_subjet1_btag_"+cname, 100, 0.0, 1.0);
+    for (const auto& c : m_containments){
+        std::string cname = c+"_"+name;
+        init_hist("ljet_pt_"+cname,     2000,  0.0, 2000.0);
+        init_hist("ljet_eta_"+cname,      50, -2.5,    2.5);
+        init_hist("ljet_phi_"+cname,      64, -3.2,    3.2);
+        init_hist("ljet_SDmass_"+cname,  500,  0.0,  500.0);
+        init_hist("ljet_tau1_"+cname,    200,  0.0,    2.0);
+        init_hist("ljet_tau2_"+cname,    200,  0.0,    2.0);
+        init_hist("ljet_tau3_"+cname,    200,  0.0,    2.0);
+        init_hist("ljet_tau21_"+cname,   100,  0.0,    1.0);
+        init_hist("ljet_tau32_"+cname,   100,  0.0,    1.0);
+        init_hist("ljet_subjet0_btag_"+cname, 100, 0.0, 1.0);
+        init_hist("ljet_subjet1_btag_"+cname, 100, 0.0, 1.0);
 
-            init_hist("ljet_pt_eta_"+cname,    200,  0.0, 2000.0,  50, -2.5, 2.5);  // pt vs eta (pt=x-axis)
-            init_hist("ljet_pt_SDmass_"+cname, 200,  0.0, 2000.0,  50,  0, 500);    // pt vs SDmass (pt=x-axis)
+        init_hist("ljet_pt_eta_"+cname,    200,  0.0, 2000.0,  50, -2.5, 2.5);  // pt vs eta (pt=x-axis)
+        init_hist("ljet_pt_SDmass_"+cname, 200,  0.0, 2000.0,  50,  0, 500);    // pt vs SDmass (pt=x-axis)
 
-            // plots with both AK4 and AK8 jets
-            if (m_useJets){
-                init_hist("deltaR_ljet_jet_"+cname, 500, 0.0, 5.0); // nearest AK4+AK8 (AK4 outside AK8)
-                init_hist("ljet_jet_m_"+cname,  1000, 0.0, 1000.0); // nearest AK4+AK8 (AK4 outside AK8)
-                init_hist("ljet_jet_pt_"+cname, 2000, 0.0, 2000.0); // nearest AK4+AK8 (AK4 outside AK8)
-            }
-        }
+        // plots with both AK4 and AK8 jets
+        init_hist("deltaR_ljet_jet_"+cname, 500, 0.0, 5.0); // nearest AK4+AK8 (AK4 outside AK8)
+        init_hist("ljet_jet_m_"+cname,  1000, 0.0, 1000.0); // nearest AK4+AK8 (AK4 outside AK8)
+        init_hist("ljet_jet_pt_"+cname, 2000, 0.0, 2000.0); // nearest AK4+AK8 (AK4 outside AK8)
     }
 
-    if (m_useLargeRJets && m_useJets){
-        // AK8+AK4 system of interest
-        std::vector<std::string> topAntiTop = {"top","antitop"};
-        for (const auto& x : topAntiTop){
-            // AK8 mass vs DeltaR(AK8,AK4)
-            init_hist(x+"_MassvDR_ljet-W_jet-BONLY_"+name,  1000,0,1000,50,0,5);
-            init_hist(x+"_MassvDR_ljet-BQ_jet-QONLY_"+name, 1000,0,1000,50,0,5);
-            // AK8 Tau21 vs DeltaR(AK8,AK4)
-            init_hist(x+"_Tau21vDR_ljet-W_jet-BONLY_"+name,  100,0,1,50,0,5);
-            init_hist(x+"_Tau21vDR_ljet-BQ_jet-QONLY_"+name, 100,0,1,50,0,5);
-            // AK8 Tau32 vs DeltaR(AK8,AK4)
-            init_hist(x+"_Tau32vDR_ljet-W_jet-BONLY_"+name,  100,0,1,50,0,5);
-            init_hist(x+"_Tau32vDR_ljet-BQ_jet-QONLY_"+name, 100,0,1,50,0,5);
-            // DeltaR(AK8,AK4)
-            init_hist(x+"_deltaR_ljet-W_jet-BONLY_"+name,  500, 0.0, 5.0);
-            init_hist(x+"_mass_ljet-W_jet-BONLY_"+name,   1000, 0.0,1000.0);
-            init_hist(x+"_deltaR_ljet-BQ_jet-QONLY_"+name, 500, 0.0, 5.0);
-            init_hist(x+"_mass_ljet-BQ_jet-QONLY_"+name,  1000, 0.0,1000.0);
-        }
+    // AK8+AK4 system of interest
+    std::vector<std::string> topAntiTop = {"top","antitop"};
+    for (const auto& x : topAntiTop){
+        // AK8 mass vs DeltaR(AK8,AK4)
+        init_hist(x+"_MassvDR_ljet-W_jet-BONLY_"+name,  1000,0,1000,50,0,5);
+        init_hist(x+"_MassvDR_ljet-BQ_jet-QONLY_"+name, 1000,0,1000,50,0,5);
+        // AK8 Tau21 vs DeltaR(AK8,AK4)
+        init_hist(x+"_Tau21vDR_ljet-W_jet-BONLY_"+name,  100,0,1,50,0,5);
+        init_hist(x+"_Tau21vDR_ljet-BQ_jet-QONLY_"+name, 100,0,1,50,0,5);
+        // AK8 Tau32 vs DeltaR(AK8,AK4)
+        init_hist(x+"_Tau32vDR_ljet-W_jet-BONLY_"+name,  100,0,1,50,0,5);
+        init_hist(x+"_Tau32vDR_ljet-BQ_jet-QONLY_"+name, 100,0,1,50,0,5);
+        // DeltaR(AK8,AK4)
+        init_hist(x+"_deltaR_ljet-W_jet-BONLY_"+name,  500, 0.0, 5.0);
+        init_hist(x+"_mass_ljet-W_jet-BONLY_"+name,   1000, 0.0,1000.0);
+        init_hist(x+"_deltaR_ljet-BQ_jet-QONLY_"+name, 500, 0.0, 5.0);
+        init_hist(x+"_mass_ljet-BQ_jet-QONLY_"+name,  1000, 0.0,1000.0);
     }
 
-    if (m_useJets){
-        init_hist("n_jets_"+name,   31, -0.5,  30.5);
-        init_hist("n_btags_"+name,  11, -0.5,  10.5);
-
-        init_hist("jet_pt_"+name,  500, 0.0,  500);
-        init_hist("jet_eta_"+name,  50, -2.5, 2.5);
-        init_hist("jet_phi_"+name,  64, -3.2, 3.2);
-        init_hist("jet_bdisc_"+name, 200, -1,1);
-    }
-
-
-    if (m_useLeptons){
-        init_hist("lep_pt_"+name,  500, 0.0, 2000);
-        init_hist("lep_eta_"+name,  50, -2.5, 2.5);
-        init_hist("lep_phi_"+name,  64, -3.2, 3.2);
-    }
-
-    // kinematics
-    init_hist("met_met_"+name, 500,  0.0,  500);
-    init_hist("met_phi_"+name, 6.4, -3.2,  3.2);
-    init_hist("ht_"+name,     5000,  0.0, 5000);
+    init_hist("n_jets_"+name,   31, -0.5,  30.5);
+    init_hist("jet_pt_"+name,  500, 0.0,  500);
+    init_hist("jet_eta_"+name,  50, -2.5, 2.5);
+    init_hist("jet_phi_"+name,  64, -3.2, 3.2);
+    init_hist("jet_bdisc_"+name, 200, -1,1);
 
     // DNN
     init_hist("dnn_"+name,  100, 0.0,   1.);
@@ -265,9 +232,7 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
     // Load some objects from Event
     std::vector<Jet> jets   = event.jets();
     std::vector<Ljet> ljets = event.ljets();
-    std::vector<Lepton> leptons = event.leptons();
     std::vector<Top> tops = event.ttbar();  // reconstructed ttbar system
-    MET met = event.met();
 
     cma::DEBUG("HISTOGRAMMER : event weight = "+std::to_string(event_weight) );
     int FULL  = m_mapContainment.at("FULL");
@@ -276,7 +241,9 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
     int QONLY = m_mapContainment.at("QONLY");
     int BONLY = m_mapContainment.at("BONLY");
 
-    if (m_useLargeRJets){
+    bool useLargeRJets(true);
+    bool useJets(true);
+    if (useLargeRJets){
         cma::DEBUG("HISTOGRAMMER : Fill large-R jets");
         for (const auto& ljet : ljets){
             if (std::abs(ljet.containment)>FULL){
@@ -328,9 +295,8 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
     } // end if use AK8
 
 
-    if (m_useJets){
+    if (useJets){
         cma::DEBUG("HISTOGRAMMER : Fill small-R jets");
-        fill("n_btags_"+name, event.btag_jets().size(), event_weight );
         fill("n_jets_"+name, jets.size(), event_weight );
 
         for (const auto& jet : jets){
@@ -371,22 +337,6 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
         } // end loop over ttbar system
     } // end if useJets and useLargeRJets
 
-
-    if (m_useLeptons){
-        cma::DEBUG("HISTOGRAMMER : Fill leptons");
-        for (const auto& lep : leptons){
-            fill("lep_pt_"+name,  lep.p4.Pt(),  event_weight);
-            fill("lep_eta_"+name, lep.p4.Eta(), event_weight);
-            fill("lep_phi_"+name, lep.p4.Phi(), event_weight);
-        }
-    }
-
-
-    // kinematics
-    cma::DEBUG("HISTOGRAMMER : Fill kinematics");
-    fill("met_met_"+name, met.p4.Pt(),  event_weight);
-    fill("met_phi_"+name, met.p4.Phi(), event_weight);
-    fill("ht_"+name,      event.HT(),   event_weight);
 
     // DNN
     cma::DEBUG("HISTOGRAMMER : Fill DNN");

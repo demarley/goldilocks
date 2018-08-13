@@ -40,6 +40,7 @@ class histogrammer4ML : public histogrammer {
 
     configuration *m_config;
     std::string m_name;
+    bool m_usePUPPI;
 
     // Target values for system
     std::vector<std::string> m_targets = {"0","1","2"};

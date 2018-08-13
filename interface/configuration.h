@@ -30,97 +30,57 @@ class configuration {
     // Print configuration
     virtual void print();
 
-    virtual bool isMC();              // must call "inspectFile(file)" or "isMC(file)" first!
+    virtual bool isMC();             // must call "inspectFile(file)" or "isMC(file)" first!
     virtual bool isMC( TFile& file );
-    bool isGridFile();
     bool isTtbar(){ return m_isTtbar;}
     bool isQCD(){ return m_isQCD;}
 
     // object declarations
-    virtual bool useJets();
-    virtual bool useNeutrinos();
-    virtual bool useLeptons();
-    virtual bool useLargeRJets();
-    virtual bool useRCJets();
-    virtual bool useTruth();
-
-    std::string jet_btagWkpt();
-    float cMVAv2L() {return m_cMVAv2L;}
-    float cMVAv2M() {return m_cMVAv2M;}
-    float cMVAv2T() {return m_cMVAv2T;}
+    virtual bool useJets(){ return m_useJets;}
+    virtual bool useLargeRJets(){ return m_useLargeRJets;}
+    virtual bool usePUPPI(){ return m_usePUPPI;}
+    virtual bool useTruth(){ return m_useTruth;}
 
     // functions about the TTree
-    virtual bool isNominalTree();
-    virtual bool isNominalTree( const std::string &tree_name );
-    std::vector<std::string> treeNames();
     void setTreename(std::string treeName);
-    std::string treename();
+    std::string treename(){ return m_treename;}
 
     // functions about the file
     virtual void inspectFile( TFile& file );
-    std::vector<std::string> filesToProcess();
+    std::vector<std::string> filesToProcess(){ return m_filesToProcess;}
     void setFilename(std::string fileName);
-    std::string filename();
+    std::string filename(){ return m_filename;}
     std::string primaryDataset() {return m_primaryDataset;}
     unsigned int NTotalEvents() {return m_NTotalEvents;}
 
     // return some values from config file
-    std::string verboseLevel();
-    std::string selection();
-    std::string cutsfile();
-    std::string outputFilePath();
-    std::string customFileEnding();
-    std::string configFileName();
-    std::string getAbsolutePath();
-    int nEventsToProcess();
-    unsigned long long firstEvent();
-    bool makeNewFile();
-    bool makeHistograms();
-    bool makeEfficiencies();
+    std::string verboseLevel(){ return m_verboseLevel;}
+    std::string selection(){ return m_selection;}
+    std::string cutsfile(){ return m_cutsfile;}
+    std::string outputFilePath(){ return m_outputFilePath;}
+    std::string customFileEnding(){ return m_customFileEnding;}
+    std::string configFileName(){ return m_configFile;}
+    std::string getAbsolutePath(){ return m_cma_absPath;}
+    int nEventsToProcess(){ return m_nEventsToProcess;}
+    unsigned long long firstEvent(){ return m_firstEvent;}
+    bool makeNewFile(){ return m_makeNewFile;}
+    bool makeHistograms(){ return m_makeHistograms;}
 
     // information for event weights
-    std::string metadataFile();
+    std::string metadataFile(){ return m_metadataFile;}
     std::map<std::string,Sample> mapOfSamples(){return m_mapOfSamples;}
     Sample sample(){return m_mapOfSamples.at(m_primaryDataset);}
-    virtual double LUMI();
-
-    // weight systematics
-    bool calcWeightSystematics();
-    std::map<std::string,unsigned int> mapOfWeightVectorSystematics();
-    std::vector<std::string> listOfWeightSystematics();
-    std::string listOfWeightSystematicsFile();
-    std::string listOfWeightVectorSystematicsFile();
 
     // DNN
-    std::string dnnFile();
-    bool getDNN();
-    double minDNN();
-    double maxDNN();
-    std::string dnnKey();   // key for lwtnn
+    std::string dnnFile(){ return m_dnnFile;}
+    bool DNNtraining(){ return m_DNNtraining;}
+    bool DNNinference(){ return m_DNNinference;}
+    std::string dnnKey(){ return m_dnnKey;}   // key for lwtnn
 
     // Reco/Truth event loops
-    bool doRecoEventLoop();
-    bool doTruthEventLoop();
-    bool matchTruthToReco();
-    void setMatchTruthToReco(bool truthToReco);
     std::map<std::string,int> mapOfPartonContainment() {return m_containmentMap;}
     std::map<int,std::string> mapOfPartonContainmentRev() {return m_containmentMapRev;}
     std::map<std::string,int> mapOfTargetValues() {return m_targetMap;}
-
-    // misc. for dilepton ttbar
-    bool buildNeutrinos();
-
-    float beamEnergy() {return m_beamEnergy;}           // 13000.;
-    double topQuarkMass() {return m_topQuarkMass;}      // 172.5
-    double bQuarkMass() {return m_bQuarkMass;}          // 4.18
-    double WMass() {return m_WMass;}                    // 80.2
-
-    /// All analysis eras as needed
-    enum Era{run2_13tev_25ns,     run2_13tev_2015_25ns, run2_13tev_2016_25ns, 
-             run2_13tev_25ns_74X, undefined};
-    Era convert(const std::string& era);       /// Convert an era from string to enum
-    std::string convert(const Era& era);   /// Convert an era from enum to string
-    double energyInTev(const Era& era) {return 13.;}     /// Return energy for given era in TeV
 
   protected:
 
@@ -134,22 +94,14 @@ class configuration {
     bool m_isTtbar;
     bool m_isGridFile;
     bool m_useTruth;
+    bool m_fileInspected;
 
     // object declarations
     bool m_useJets;
-    bool m_useLeptons;
     bool m_useLargeRJets;
-    bool m_useRCJets;
-    bool m_useNeutrinos;
-    bool m_buildNeutrinos;
-
-    // luminosity
-    double m_LUMI      = 36074.56; // 2015+2016 luminosity
-    double m_LUMI_2015 = 3212.96;
-    double m_LUMI_2016 = 32861.6; // OflLumi-13TeV-008
+    bool m_usePUPPI;
 
     // return some values from config file
-    std::string m_input_selection;
     std::string m_selection;
     std::string m_cutsfile;
     std::string m_treename;
@@ -163,52 +115,20 @@ class configuration {
     std::string m_customFileEnding;
     bool m_makeNewFile;
     bool m_makeHistograms;
-    bool m_makeEfficiencies;
     std::string m_cma_absPath;
     std::string m_metadataFile;
-    bool m_getDNN;
+    bool m_DNNtraining;
+    bool m_DNNinference;
     std::string m_dnnFile;
     std::string m_dnnKey;
-    bool m_doRecoEventLoop;
-    bool m_matchTruthToReco;
-
-    std::string m_jet_btag_wkpt;   // "L","M","T"
-    std::string m_tjet_btag_wkpt;
-    std::string m_toptag_wkpt;
-
-    // b-tagging (https://twiki.cern.ch/twiki/bin/viewauth/CMS/BtagRecommendation80XReReco)
-    // isBTagged = (jet.cMVAv2 > wkpt)
-    std::vector<std::string> m_btag_WPs = {"L","M","T"};
-    float m_cMVAv2L=-0.5884;
-    float m_cMVAv2M=0.4432;
-    float m_cMVAv2T=0.9432;
 
     std::vector<std::string> m_filesToProcess;
-    std::vector<std::string> m_treeNames;
-
-    bool m_calcWeightSystematics;
-    std::map<std::string,unsigned int> m_mapOfWeightVectorSystematics;
-    std::vector<std::string> m_listOfWeightSystematics;
-    std::string m_listOfWeightSystematicsFile;
-    std::string m_listOfWeightVectorSystematicsFile;
-
     std::map<std::string,Sample> m_mapOfSamples;  // map of Sample structs
 
     // OLD:
     std::map<std::string, float> m_XSection; // map DSID to XSection
     std::map<std::string, float> m_KFactor;  // map DSID to KFactor
     std::map<std::string, float> m_AMI;      // map DSID to sum of weights
-
-    // -- Top Mass Variables -- //
-    const double m_electronMass = 0.000511;
-    const double m_muonMass     = 0.105658;
-    const double m_bQuarkMass   = 4.8;
-    const double m_WMass        = 80.4;
-    const double m_topQuarkMass = 172.5;
-    const float m_beamEnergy    = 13000.;
-    const int SENTINEL    = -1000;
-    const int NCHAN       = 4;
-    const double m_sqrt_s = 13000;      // center-of-mass energy
 
     // Samples primary dataset names
     std::vector<std::string> m_qcdFiles   = {
@@ -227,6 +147,7 @@ class configuration {
       "QCD_HT2000toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
       "QCD_HT200to300_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
       "QCD_HT300to500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8"}; // possible qcd files
+
     std::vector<std::string> m_ttbarFiles = {
       "TTToSemilepton_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8",
       "TTJets_SingleLeptFromT_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
@@ -263,35 +184,25 @@ class configuration {
 
     std::map<std::string,std::string> m_defaultConfigs = {
              {"useJets",               "true"},
-             {"useLeptons",            "true"},
              {"useLargeRJets",         "true"},
-             {"useRCJets",             "false"},
-             {"useNeutrinos",          "true"},
+             {"usePUPPI",              "false"},
              {"useTruth",              "false"},
-             {"jet_btag_wkpt",         "70"},
              {"makeNewFile",           "true"},
              {"makeHistograms",        "true"},
-             {"makeEfficiencies",      "true"},
              {"NEvents",               "-1"},
              {"firstEvent",            "0"},
-             {"input_selection",       "grid"},
-             {"selection",             "example"},
+             {"selection",             "none"},
              {"output_path",           "./"},
              {"customFileEnding",      ""},
-             {"calcWeightSystematics", "false"},
-             {"weightSystematicsFile",       "config/weightSystematics.txt"},
-             {"weightVectorSystematicsFile", "config/weightVectorSystematics.txt"},
-             {"cutsfile",              "examples/config/cuts_example.txt"},
-             {"inputfile",             "examples/config/miniSL_ALLfiles.txt"},
+             {"cutsfile",              "config/cuts_none.txt"},
+             {"inputfile",             "config/inputfiles.txt"},
              {"treename",              "stopTreeMaker/AUX"},
-             {"treenames",             "config/treenames_nominal.txt"},
              {"metadataFile",          "config/sampleMetaData.txt"},
              {"verboseLevel",          "INFO"},
+             {"DNNtraining",           "false"},
+             {"DNNinference",          "false"},
              {"dnnFile",               "config/keras_ttbar_DNN.json"},
-             {"dnnKey",                "dnn"},
-             {"getDNN",                "false"},
-             {"doRecoEventLoop",       "true"},
-             {"buildNeutrinos",        "true"} };
+             {"dnnKey",                "dnn"} };
 };
 
 #endif

@@ -21,12 +21,6 @@ ttbarReco::ttbarReco( configuration& cmaConfig ) :
 ttbarReco::~ttbarReco() {}
 
 
-std::vector<Top> ttbarReco::tops(){
-    /* Return the ttbar system */
-    return m_ttbar;
-}
-
-
 void ttbarReco::execute(const std::vector<Jet>& jets, const std::vector<Ljet>& ljets){
     /* Build top quarks system
        Testing semi-resolved tagger; only interested in AK8(QB/W)+AK4
@@ -114,8 +108,6 @@ void ttbarReco::execute(const std::vector<Jet>& jets, const std::vector<Ljet>& l
 
     return;
 }
-
-
 
 
 void ttbarReco::overlapRemoval(const Ljet& ak8, std::vector<Jet>& new_objects, const bool match_truth){

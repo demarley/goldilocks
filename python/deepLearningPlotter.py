@@ -7,7 +7,7 @@ daniel.edison.marley@cernSPAMNOT.ch
 Texas A&M University
 -----
 
-Base class for plotting deep learning
+Base class for plotting deep learning information & performance
 
 Designed for running on desktop at TAMU
 with specific set of software installed
@@ -19,11 +19,11 @@ import itertools
 from datetime import date
 import numpy as np
 
-from hepPlotter.hepPlotterHist1D import HepPlotterHist1D
-from hepPlotter.hepPlotter2D import HepPlotter2D
+from Analysis.hepPlotter.histogram1D import Histogram1D
+from Analysis.hepPlotter.histogram1D import Histogram2D
 
-import hepPlotter.hepPlotterLabels as hpl
-import hepPlotter.hepPlotterTools as hpt
+import Analysis.hepPlotter.labels as hpl
+import Analysis.hepPlotter.tools as hpt
 
 
 

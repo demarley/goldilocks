@@ -218,19 +218,6 @@ std::vector<T> compareVectors( std::vector<T> v1, std::vector<T> v2){
     return v3;
 }
 
-unsigned int setRandomNumberSeeds(const Lepton& lepton, const Lepton& antiLepton, 
-                                  const Jet& jet1, const Jet& jet2) {
-    /* 
-       Asymmetric treatment of both jets, and also both leptons, 
-       to ensure different seed for each combination in dileptonTtbarReco
-    */
-    unsigned int seed = static_cast<int>( 1.e6 * (jet1.p4.Pt()/jet2.p4.Pt()) * 
-                                          std::sin((lepton.p4.Pt() + 2.*antiLepton.p4.Pt()) * 1.e6) );
-    gRandom->SetSeed(seed);
-
-    return seed;
-}
-
 
 bool deltaRMatch( const TLorentzVector &particle1, const TLorentzVector &particle2, const double deltaR ){
     /* Do the deltaR calculation (in one place) */
