@@ -1,3 +1,0 @@
-[submodule "python/hepPlotter"]
-	path = python/hepPlotter
-	url = https://github.com/demarley/hepPlotter.git

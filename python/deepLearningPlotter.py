@@ -19,11 +19,11 @@ import itertools
 from datetime import date
 import numpy as np
 
-from Analysis.hepPlotter.histogram1D import Histogram1D
-from Analysis.hepPlotter.histogram1D import Histogram2D
+from Analysis.goldilocks.hepPlotter.histogram1D import Histogram1D
+from Analysis.goldilocks.hepPlotter.histogram1D import Histogram2D
 
-import Analysis.hepPlotter.labels as hpl
-import Analysis.hepPlotter.tools as hpt
+import Analysis.goldilocks.hepPlotter.labels as hpl
+import Analysis.goldilocks.hepPlotter.tools as hpt
 
 
 
