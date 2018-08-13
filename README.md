@@ -32,4 +32,4 @@ git clone --recurse-submodules https://github.com/demarley/goldilocks.git Analys
 
 
 # Comments or Questions
-Contact the author
+Please post an issue or submit a PR with any questions, comments, or suggestions.
