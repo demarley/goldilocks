@@ -20,6 +20,11 @@ cd CMSSW_8_0_28_patch1/src/
 cmsenv
 git cms-init
 
+## Lightweight NN (for running Keras models in C++)
+mkdir lwtnn
+git clone https://github.com/demarley/lwtnn.git -b CMSSW_8_0_X-compatible lwtnn/lwtnn
+
+## This module
 mkdir Analysis
 git clone --recurse-submodules https://github.com/demarley/goldilocks.git Analysis/
 ```
