@@ -10,7 +10,21 @@ _The current setup does not use the Producer/Analyzer model, thus porting this t
 
 ## Getting Started
 
-CMSSW release: `CMSSW_8_0_28_patch1`
+The goldilocks framework has been developed in the CMSSW release `CMSSW_8_0_28_patch1`.
+To begin, checkout the relevant packages, including the [hepPlotter]() submodule for goldilocks.
+
+```
+## setup CMSSW
+cmsrel CMSSW_8_0_28_patch1
+cd CMSSW_8_0_28_patch1/src/
+cmsenv
+git cms-init
+
+mkdir Analysis
+git clone --recurse-submodules https://github.com/demarley/goldilocks.git Analysis/
+```
+
+
 
 # Comments or Questions
 Contact the author
