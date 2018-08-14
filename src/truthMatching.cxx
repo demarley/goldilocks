@@ -13,8 +13,7 @@ Match reconstructed objects to truth objects
 
 
 truthMatching::truthMatching(configuration &cmaConfig) : 
-  m_config(&cmaConfig){
-  }
+  m_config(&cmaConfig){}
 
 truthMatching::~truthMatching() {}
 
@@ -45,7 +44,7 @@ void truthMatching::matchLeptonicTopJet(Jet& jet){
     jet.containment = 0;         // initialize containment
     jet.truth_partons.clear();
 
-    float match_radius(0.75*jet.radius);   // DeltaR<0.3 rather than 0.4
+    float match_radius(0.75*jet.radius);   // e.g., DeltaR<0.3 rather than 0.4
 
     for (unsigned int t_idx=0, size=m_truth_tops.size(); t_idx<size; t_idx++){
         auto truthtop = m_truth_tops.at(t_idx);
@@ -57,9 +56,7 @@ void truthMatching::matchLeptonicTopJet(Jet& jet){
         // if the jet is matched to a truth top, exit
         if (jet.containment!=0){
             cma::DEBUG("TRUTHMATCHING : Jet deltaR bottomQ = "+std::to_string(jet.p4.DeltaR(bottomQ.p4)));
-
             jet.matchId = t_idx;
-            break;
         }
     }
 

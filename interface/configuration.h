@@ -176,10 +176,10 @@ class configuration {
     // map of target values used in training ML
     std::map<std::string,int> m_targetMap = {
       {"none",0},    // :: NONE = QCD (background)
-      {"QB",1},      // :: QB-Q = Signal AK8(QB) + AK4(Q)
+      {"BQ",1},      // :: QB-Q = Signal AK8(QB) + AK4(Q)
       {"W",2},       // :: QQ-B = Signal AK8(W)  + AK4(B)
-      {"full",3},    // :: FULL = Signal AK8
-      {"other",4} }; // :: Other = placeholder (resolved/Q-only/B-only/etc.)
+      {"ttbckg",3} };// :: QQ+X/QB+X : background
+//      {"FULL",4} };  // :: FULL = Signal AK8
 
 
     std::map<std::string,std::string> m_defaultConfigs = {

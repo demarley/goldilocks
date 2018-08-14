@@ -19,6 +19,7 @@ histogrammer4ML::histogrammer4ML( configuration& cmaConfig, std::string name ) :
   m_name(name),
   m_usePUPPI(false){
     m_usePUPPI = m_config->usePUPPI();
+    m_targets  = m_config->mapOfTargetValues();
 }
 
 histogrammer4ML::~histogrammer4ML() {}
@@ -50,7 +51,9 @@ void histogrammer4ML::bookHists(){
     cma::DEBUG("HISTOGRAMMER : Init. histograms: "+m_name);
 
     // features for DNN
-    for (const auto& target : m_targets){
+    for (unsigned int x=0, size=m_targets.size(); x<size; x++){
+        std::string target = std::to_string(x);
+
         // AK4
         histogrammer::init_hist("AK4_deepCSVb_"+target+"_"+m_name,  200, -1,1);
         histogrammer::init_hist("AK4_deepCSVbb_"+target+"_"+m_name, 200, -1,1);

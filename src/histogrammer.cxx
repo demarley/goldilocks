@@ -235,12 +235,6 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
     std::vector<Top> tops = event.ttbar();  // reconstructed ttbar system
 
     cma::DEBUG("HISTOGRAMMER : event weight = "+std::to_string(event_weight) );
-    int FULL  = m_mapContainment.at("FULL");
-    int QB    = m_mapContainment.at("BQ");
-    int W     = m_mapContainment.at("W");
-    int QONLY = m_mapContainment.at("QONLY");
-    int BONLY = m_mapContainment.at("BONLY");
-
     bool useLargeRJets(true);
     bool useJets(true);
     if (useLargeRJets){
@@ -317,7 +311,7 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
 
             Ljet ljet = ljets.at(top.ljet);
             cma::DEBUG("HISTOGRAMMER :  > Fatjet containment = "+std::to_string(ljet.containment));
-            if (ljet.containment!=W && ljet.containment!=QB){
+            if (ljet.containment!=W && ljet.containment!=BQ){
                 cma::DEBUG("HISTOGRAMMER :  > Containment is not W or QB");
                 continue;
             }
@@ -329,6 +323,7 @@ void histogrammer::fill( const std::string& name, Event& event, double event_wei
             std::string jetCt  = m_mapContainmentRev[jet.containment];
 
             cma::DEBUG("HISTOGRAMMER :  > Fill pid "+pid+"; ljet ct "+ljetCt+", jet ct "+jetCt);
+
             fill(pid+"_deltaR_ljet-"+ljetCt+"_jet-"+jetCt+"_"+name, jet.p4.DeltaR( ljet.p4 ), event_weight );
             fill(pid+"_mass_ljet-"+ljetCt+"_jet-"+jetCt+"_"+name,   (jet.p4+ljet.p4).M(), event_weight );
             fill(pid+"_MassvDR_ljet-"+ljetCt+"_jet-"+jetCt+"_"+name, (jet.p4+ljet.p4).M(), jet.p4.DeltaR( ljet.p4 ), event_weight );

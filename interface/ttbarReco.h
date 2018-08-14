@@ -18,7 +18,7 @@ class ttbarReco {
 
     std::vector<Top> tops(){ return m_ttbar;}
     void execute(const std::vector<Jet>& jets, const std::vector<Ljet>& ljets);
-    void overlapRemoval(const Ljet& ak8, std::vector<Jet>& new_objects, const bool match_truth);
+    void overlapRemoval(const Ljet& ak8, std::vector<Jet>& new_objects, const bool isTtbar);
 
   protected:
 

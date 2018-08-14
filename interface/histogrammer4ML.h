@@ -43,7 +43,7 @@ class histogrammer4ML : public histogrammer {
     bool m_usePUPPI;
 
     // Target values for system
-    std::vector<std::string> m_targets = {"0","1","2"};
+    std::map<std::string,int> m_targets;
 };
 
 #endif

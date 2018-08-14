@@ -269,7 +269,7 @@ void Event::initialize_truth(){
                 if (parton.isW) top.W = parton.index;
                 else if (parton.isBottom) {
                     top.bottom = parton.index;
-                    parton.containment = m_mapContainment.at("BONLY");
+                    parton.containment = BONLY;
                     if (top.isAntiTop) parton.containment*=-1;
                 }
                 else top.daughters.push_back( parton.index );        // non-W/bottom daughter
@@ -282,7 +282,7 @@ void Event::initialize_truth(){
                 top.isHadronic = (parton.isQuark);
                 top.isLeptonic = (parton.isLepton);
 
-                parton.containment = m_mapContainment.at("QONLY");
+                parton.containment = QONLY;
                 if (top.isAntiTop) parton.containment*=-1;
 
                 m_truth_tops[top_index] = top;      // update entry

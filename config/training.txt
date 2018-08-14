@@ -16,4 +16,4 @@ DNNtraining true
 firstEvent 0
 NEvents -1
 usePUPPI false
-verboseLevel DEBUG
+verboseLevel INFO

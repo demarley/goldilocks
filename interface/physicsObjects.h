@@ -6,10 +6,22 @@
    This structure allows the Event class
    and other classes to access these objects
    without circular inclusion (which breaks!)
+
+   Use enumerated type for containment definitions
+    tmatch t = NONE;
+    tmatch s = QB;
+    t+s -> 1
+      QB   -> (tmatch) (tmatch::QB) : (int) 1
+      NONE -> (tmatch) (tmatch::NONE) : (int) 0
+      FULL -> (tmatch) (tmatch::FULL) : (int) 3
 */
 #include "TLorentzVector.h"
 #include <map>
 #include <string>
+
+
+// containment for AK8 jets (how they match to top partons)
+enum tmatch {NONE,BONLY,QONLY,BQ,W,FULL};
 
 
 // base object (consistent reference to TLorentzVector)

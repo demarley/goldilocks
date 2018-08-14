@@ -4,10 +4,10 @@
 <use   name="rootgraphics"/>
 <use   name="root"/>
 
-<bin   name="training" file="training.cxx">
+<bin   name="run_training" file="run_training.cxx">
 </bin>
 
-<bin   name="inference" file="inference.cxx">
+<bin   name="run_inference" file="run_inference.cxx">
 </bin>
 
 
