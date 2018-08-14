@@ -24,9 +24,10 @@ git cms-init
 mkdir lwtnn
 git clone https://github.com/demarley/lwtnn.git -b CMSSW_8_0_X-compatible lwtnn/lwtnn
 
-## This module
+## Goldilocks and hepPlotter
 mkdir Analysis
-git clone --recurse-submodules https://github.com/demarley/goldilocks.git Analysis/
+git clone https://github.com/demarley/hepPlotter.git Analysis/
+git clone https://github.com/demarley/goldilocks.git Analysis/
 ```
 
 
