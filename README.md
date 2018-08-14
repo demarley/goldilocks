@@ -11,7 +11,7 @@ _The current setup does not use the Producer/Analyzer model, thus porting this t
 ## Getting Started
 
 The goldilocks framework has been developed in the CMSSW release `CMSSW_8_0_28_patch1`.
-To begin, checkout the relevant packages, including the [hepPlotter]() submodule for goldilocks.
+To begin, checkout the relevant packages, including the [hepPlotter](https://github.com/demarley/hepPlotter) module for goldilocks.
 
 ```
 ## setup CMSSW
