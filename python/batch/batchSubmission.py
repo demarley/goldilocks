@@ -15,7 +15,7 @@ import os
 import sys
 import commands
 from collections import OrderedDict
-import Analysis.CyMiniAna.util as util
+import Analysis.goldilocks.util as util
 import batchScripts as bs
 
 
