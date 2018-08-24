@@ -13,18 +13,36 @@ Designed for running on desktop at TAMU
 with specific set of software installed
 --> not guaranteed to work in CMSSW environment!
 """
+import os
+import sys
 import json
 import util
 import itertools
 from datetime import date
 import numpy as np
 
-from Analysis.hepPlotter.histogram1D import Histogram1D
-from Analysis.hepPlotter.histogram1D import Histogram2D
+# load hepPlotter code
+try:
+    CMSSW_BASE = os.environ['CMSSW_BASE']
+    from Analysis.hepPlotter.histogram1D import Histogram1D
+    from Analysis.hepPlotter.histogram1D import Histogram2D
+    import Analysis.hepPlotter.labels as hpl
+    import Analysis.hepPlotter.tools as hpt
+except KeyError:
+    cwd = os.getcwd()
+    hpd = cwd.replace("goldilocks","/hepPlotter/python/")
+    print cwd,hpd
+    if hpd not in sys.path:
+        sys.path.insert(0,hpd)
+    from histogram1D import Histogram1D
+    from histogram2D import Histogram2D
+    import labels as hpl
+    import tools as hpt
 
-import Analysis.hepPlotter.labels as hpl
-import Analysis.hepPlotter.tools as hpt
-
+import ROOT
+import plotlabels as plb
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 
 
 class Target(object):
@@ -46,8 +64,8 @@ class DeepLearningPlotter(object):
         self.date = date.today().strftime('%d%b%Y')
 
         self.betterColors    = hpt.betterColors()['linecolors']
-        self.sample_labels   = hpl.sample_labels()
-        self.variable_labels = hpl.variable_labels()
+        self.sample_labels   = plb.sample_labels()
+        self.variable_labels = plb.variable_labels()
 
         self.msg_svc      = util.VERBOSE()
         self.output_dir   = ''
