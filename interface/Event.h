@@ -82,7 +82,7 @@ class Event {
     float DNN(){ return m_DNN;}
 
     void buildTtbar();
-    std::vector<Top> ttbar() {return m_ttbar;}
+    std::vector<Top> ttbar() const {return m_ttbar;}
     void deepLearningPrediction(Top& top);
 
     // Get weights

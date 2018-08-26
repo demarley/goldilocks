@@ -138,7 +138,7 @@ bool eventSelection::applySelection(const Event &event) {
     // Access event information
     std::vector<Jet> jets   = event.jets();
     std::vector<Ljet> ljets = event.ljets();
-
+    std::vector<Top> tops   = event.ttbar();
 
     // Add if/else statements to perform different event selections
     if (m_training){
@@ -161,6 +161,12 @@ bool eventSelection::applySelection(const Event &event) {
             return false;
         else
             fillCutflows(first_bin+2);
+
+        // cut2 :: >=1 'good' top candidate
+        if ( tops.size()<1 )
+            return false;
+        else
+            fillCutflows(first_bin+3);
     }
 
     return true;

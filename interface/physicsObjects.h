@@ -127,6 +127,7 @@ struct Ljet : Jet {
 struct Top {
     // Define a top quark
     TLorentzVector p4;
+    bool isGood;
     unsigned int target;        // for ML training
     std::map<std::string,double> dnn;
 
