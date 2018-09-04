@@ -57,6 +57,7 @@ void ttbarReco::execute(const std::vector<Jet>& jets, const std::vector<Ljet>& l
         for (const auto& jet : ak4candidates){
 
             Top top_cand;  // reconstructed top candidates
+            top_cand.isGood = false;
             top_cand.jets.clear();
             top_cand.ljet = ljet.index;
 
@@ -81,8 +82,16 @@ void ttbarReco::execute(const std::vector<Jet>& jets, const std::vector<Ljet>& l
             else continue;     // only want specific ttbar scenarios & qcd
 
             top_cand.jets.push_back(jet.index);
+            top_cand.p4 = (jet.p4+ljet.p4);
             top_cand.target = target;
-            m_ttbar.push_back( top_cand );
+
+       	    // Require 'good' candidates to have:
+       	    // - DeltaR(AK4,AK8)>0.8 && (AK8+AK4).M()>40 GeV
+            // this should reduce the size of output QCD files...
+            if ( jet.p4.DeltaR(ljet.p4)>0.8 && top_cand.p4.M()>40. ){
+                top_cand.isGood = true;
+                m_ttbar.push_back( top_cand );
+            }
         } // end loop over AK4
     } // end loop over ak8 candidates
 
