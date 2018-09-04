@@ -1,5 +1,5 @@
-eos_path /store/user/demarley/susy/semi-resolved-tagging/goldilocks/ttbar_top
-subdir ttbar_top
+eos_path /store/user/demarley/susy/semi-resolved-tagging/goldilocks/qcd_700-1000
+subdir qcd_700-1000
 eos_tarball_path /store/user/demarley/susy/semi-resolved-tagging/goldilocks/
 date today
 output_dir eos
@@ -9,7 +9,7 @@ test False
 submit True
 verbose True
 config config/training.txt
-files config/TTJets_SingleLeptFromT_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
+#files config/TTJets_SingleLeptFromT_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
 #files config/TTJets_SingleLeptFromTbar_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
 #files config/TTJets_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
 #files config/QCD_HT1000to1500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
@@ -19,4 +19,4 @@ files config/TTJets_SingleLeptFromT_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
 #files config/QCD_HT200to300_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
 #files config/QCD_HT300to500_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
 #files config/QCD_HT500to700_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
-#files config/QCD_HT700to1000_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt
+files config/QCD_HT700to1000_TuneCUETP8M1_13TeV-madgraphMLM-pythia8.txt

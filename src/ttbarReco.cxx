@@ -86,9 +86,13 @@ void ttbarReco::execute(const std::vector<Jet>& jets, const std::vector<Ljet>& l
             top_cand.target = target;
 
        	    // Require 'good' candidates to have:
-       	    // - DeltaR(AK4,AK8)>0.8 && (AK8+AK4).M()>40 GeV
+       	    // -- 0.8 < DeltaR(AK4,AK8) < 4
+            // --  40 < (AK8+AK4).M() < 400 GeV
             // this should reduce the size of output QCD files...
-            if ( jet.p4.DeltaR(ljet.p4)>0.8 && top_cand.p4.M()>40. ){
+            float deltaR = jet.p4.DeltaR(ljet.p4);
+            float mass   = top_cand.p4.M();
+            if ( deltaR>0.8 && deltaR<4.0 &&
+                 mass >40.  && mass < 400. ){
                 top_cand.isGood = true;
                 m_ttbar.push_back( top_cand );
             }
