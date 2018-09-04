@@ -42,27 +42,44 @@ def variable_labels():
 
     variables = {}
 
-    variables['mass_lep_AK4']   = Variable(binning=hpt.hist1d(32,  0.,  800.),label=r'm$_{\ell+\text{AK4}}$')
-    variables['AK4_CSVv2']      = Variable(binning=bdisc_bins, label=r'AK4 CSVv2')
-    variables['deltaR_lep_AK4'] = Variable(binning=hpt.hist1d(50,0,5),   label=r'$\Delta$R(Lepton,AK4)')
-    variables['ptrel_lep_AK4']  = Variable(binning=hpt.hist1d(20,0,200), label=r'p$_\text{T}^\text{rel}$(Lepton,AK4)')
+    variables['AK8_C2']    = Variable(binning=hpt.hist1d(10,  0.,   0.6), label=r'C$_2^{\beta\text{=1}}$')
+    variables['AK8_D2']    = Variable(binning=hpt.hist1d(20,  0.,   5.0), label=r'D$_2^{\beta\text{=1}}$')
+    variables['AK8_d12']   = Variable(binning=hpt.hist1d(20,  0.,  125.), label=r'$\sqrt{\text{d}_{\text{12}}}$ [GeV]')
+    variables['AK8_d23']   = Variable(binning=hpt.hist1d(12,  0.,   60.), label=r'$\sqrt{\text{d}_{\text{23}}}$ [GeV]')
+    variables['AK8_eta']   = Variable(binning=hpt.hist1d(20, -3.,    3.), label=r'AK8 '+_eta)
+    variables['AK8_phi']   = Variable(binning=hpt.hist1d(20, -2.,    2.), label=r'AK8 $\phi$')
+    variables['AK8_m']     = Variable(binning=hpt.hist1d(40,  0.,  400.), label=r'AK8 '+_mass)
+    variables['AK8_pt']    = Variable(binning=hpt.hist1d(14,200., 1500.), label=r'AK8 p'+_T)
+    variables['AK8_tau1']  = Variable(binning=hpt.hist1d(10,  0.,   0.6), label=r'$\tau_{\text{1}}$')
+    variables['AK8_tau2']  = Variable(binning=hpt.hist1d(10,  0.,   0.5), label=r'$\tau_{\text{2}}$')
+    variables['AK8_tau21'] = Variable(binning=hpt.hist1d(11, 00.,   1.1), label=r'$\tau_{\text{21}}$')
+    variables['AK8_tau3']  = Variable(binning=hpt.hist1d(10,  0.,   0.6), label=r'$\tau_{\text{3}}$')
+    variables['AK8_tau32'] = Variable(binning=hpt.hist1d(11,  0.,   1.1), label=r'$\tau_{\text{32}}$')
+    variables['AK8_softDropMass'] = Variable(binning=hpt.hist1d(40,0.,400.), label=r'AK8 '+_mass)
+    variables['AK8_SDMass'] = variables['AK8_softDropMass']
+    variables['AK8_subjet0_bdisc'] = Variable(binning=hpt.hist1d(10,0,1), label=r'AK8 Subjet 0 bDisc')
+    variables['AK8_subjet0_pTrel'] = Variable(binning=hpt.hist1d(10,0,1), label=r'AK8 Subjet 0 p$_{\text{T}}^{\text{rel}}$')
+    variables['AK8_subjet1_bdisc'] = Variable(binning=hpt.hist1d(10,0,1), label=r'AK8 Subjet 1 bDisc')
+    variables['AK8_subjet1_pTrel'] = Variable(binning=hpt.hist1d(10,0,1), label=r'AK8 Subjet 1 p$_{\text{T}}^{\text{rel}}$')
 
-    variables['jet_pt']  =   Variable(binning=hpt.hist1d(40,  0.,2000.), label=r'Small-R Jet p'+_T)
-    variables['jet_eta'] =   Variable(binning=hpt.hist1d(10,-2.5,  2.5), label=r'Small-R Jet '+_eta)
-    variables['lep_eta'] = Variable(binning=hpt.hist1d(10,-2.5,   2.5),label=r'Lepton '+_eta)
-    variables['lep_pt']  = Variable(binning=hpt.hist1d(10, 25.,  300.),label=r'Lepton p'+_T)
-    variables['el_eta']  = Variable(binning=hpt.hist1d(10,-2.5,   2.5),label=r'Electron '+_eta)
-    variables['el_pt']   = Variable(binning=hpt.hist1d(10,  0.,  500.),label=r'Electron p'+_T)
-    variables['mu_eta']  = Variable(binning=hpt.hist1d(10,-2.5,   2.5),label=r'Muon '+_eta)
-    variables['mu_pt']   = Variable(binning=hpt.hist1d(10,  0.,  500.),label=r'Muon p'+_T)
-    variables['lepton_eta'] = variables['lep_eta']
-    variables['lepton_pt']  = variables['lep_pt']
+    for i in range(16):
+        variables['AK8_deepAK8_{0}'.format(i)] = Variable(binning=hpt.hist1d(10,0,1), label=r'DeepAK8[{0}]'.format(i))
 
-    variables['mtw']     = Variable(binning=hpt.hist1d(12,  0.,  120.),label=r'$\mathsf{m_T^W}$ [GeV]')
-    variables['met_met'] = Variable(binning=hpt.hist1d(50,    0,1000), label=r'E$_{\text{T}}^{\text{miss}}$ [GeV]')
-    variables['met_phi'] = Variable(binning=hpt.hist1d(16, -3.2, 3.2), label=r'$\phi^{\text{miss}}$ [GeV]')
+    variables['AK4_deepCSVb']  = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepCSV(b)')
+    variables['AK4_deepCSVbb'] = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepCSV(bb)')
+    variables['AK4_deepCSVc']  = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepCSV(c)')
+    variables['AK4_deepCSVcc'] = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepCSV(cc)')
+    variables['AK4_deepCSVl']  = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepCSV(l)')
 
-    variables['scaled'] = Variable(binning=hpt.hist1d(10,-5,5), label='Scaled Input')
+    variables['AK4_deepFlavorb']    = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepFlavor(b)')
+    variables['AK4_deepFlavorbb']   = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepFlavor(bb)')
+    variables['AK4_deepFlavorc']    = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepFlavor(c)')
+    variables['AK4_deepFlavoruds']  = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepFlavor(uds)')
+    variables['AK4_deepFlavorg']    = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepFlavor(g)')
+    variables['AK4_deepFlavorlepb'] = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepFlavor(lepb)')
+
+    variables['AK8AK4_mass']   = Variable(binning=hpt.hist1d(50,0.,5000.), label=r'AK8+AK4 '+_mass)
+    variables['AK8AK4_deltaR'] = Variable(binning=hpt.hist1d(10,0.,5.),    label=r'$\Delta$R(AK8,AK4)')
 
     return variables
 
@@ -81,22 +98,10 @@ def sample_labels():
     samples['signal'] = Sample(label='Signal',color='b')
     samples['bckg']   = Sample(label='Bckg',color='r')
 
-    # Standard Model
     ttbar = r't$\bar{\text{t}}$'
-    samples['ttbar']     = Sample(label=ttbar,color='white')
-    samples['dijet']     = Sample(label=r'Dijets', color='purple')
-    samples['multijet']  = Sample(label=r'Multi-jet', color='purple')
-    samples['diboson']   = Sample(label=r'Diboson',color='green')
-    samples['singletop'] = Sample(label=r'Single Top',color='blue')
-    samples['ttbarW']    = Sample(label=ttbar+'W',color='#C9FFE5')
-    samples['ttbarZ']    = Sample(label=ttbar+'Z',color='#7FFFD4')
-    samples['ttbarV']    = Sample(label=ttbar+'V',color='cyan')
-    samples['ttbarH']    = Sample(label=ttbar+'H',color='#3AB09E')
-    samples['ttbarX']    = Sample(label=ttbar+'V',color='#008B8B')
-    samples['wjets']     = Sample(label=r'W+jets',color='yellow')
-    samples['zjets']     = Sample(label=r'Z+jets',color='darkorange')
-
-    # Data
-    samples['data']      = Sample(label=r'Data',color='black')
+    samples['multijet'] = Sample(label=r'Multi-jet',  color='purple')
+    samples['BQ']       = Sample(label=ttbar+' (QB)', color='red')
+    samples['W']        = Sample(label=ttbar+' (W)',  color='blue')
+    samples['ttbckg']   = Sample(label=ttbar+' bckg.',color='green')
 
     return samples

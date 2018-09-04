@@ -35,6 +35,7 @@ import datetime
 
 from deepLearningPlotter import DeepLearningPlotter
 
+import ROOT
 import uproot
 import numpy as np
 import pandas as pd
@@ -79,7 +80,7 @@ class DeepLearning(object):
         self.model_name = ""            # Name for saving/loading model
         self.output_dir = 'data/dnn/'   # directory for storing NN data
         self.dnn_method = None          # DNN method applied: classification/regression: ['binary','multi','regression']
-        self.runDiagnostics = True      # Make plots pre/post training
+        self.runDiagnostics = False      # Make plots pre/post training
         self.verbose_level  = 'INFO'
         self.verbose = False
 
@@ -155,32 +156,10 @@ class DeepLearning(object):
         self.load_hep_data()
         self.build_model()
 
-        # resize arrays to equal lengths
-        ttbar1 = self.df[ self.df.target==self.targets['ttbar1'] ]
-        ttbar2 = self.df[ self.df.target==self.targets['ttbar2'] ]
-        ttbar3 = self.df[ self.df.target==self.targets['ttbar3'] ]
-        qcd    = self.df[ self.df.target==self.targets['qcd'] ]
-
-        ttbar1shape = ttbar1.shape[0]
-        ttbar2shape = ttbar2.shape[0]
-        ttbar3shape = ttbar3.shape[0]
-        qcdshape    = qcd.shape[0]
-        min_size = min( [ttbar1shape,ttbar2shape,qcdshape] )
-        if ttbar1shape>min_size: ttbar1 = ttbar1.sample(frac=1)[0:min_size]
-        if ttbar2shape>min_size: ttbar2 = ttbar2.sample(frac=1)[0:min_size]
-        if ttbar3shape>min_size: ttbar3 = ttbar3.sample(frac=1)[0:min_size]
-        if qcdshape>min_size:    qcd    = qcd.sample(frac=1)[0:min_size]
-
-        self.df = pd.concat( [qcd,ttbar1,ttbar2] )   # re-combine into dataframe
-        self.df = training_df.sample(frac=1)         # shuffle entries
-
-        self.train_model()
-
-        self.msg_svc.INFO(" SAVE MODEL")
-        self.save_model(self.useLWTNN)
+        self.train_model()      # this also saves the model in case errors occur while plotting evaluations
 
         # save plots of the performance
-        if self.runDiagnostics: self.diagnostics(postTraining=True)
+        if self.runDiagnostics: self.diagnostics(post=True)
 
         return
 
@@ -247,14 +226,20 @@ class DeepLearning(object):
 
         # - Adjust shape of true values (matrix for multiple outputs)
         num_classes = len(self.targets.keys())
-        np_utils.to_categorical(Y_train, num_classes=num_classes)
-        np_utils.to_categorical(Y_test, num_classes=num_classes)
+        Y_train = to_categorical(Y_train, num_classes=num_classes)
+        Y_test  = to_categorical(Y_test, num_classes=num_classes)
 
         ## Fit the model to training data & save the history
         callbacks_list = [] if not self.earlystopping else [EarlyStopping(**self.earlystopping)]
         history = self.model.fit(X_train,Y_train,epochs=self.epochs,validation_split=0.25,\
                                  callbacks=callbacks_list,batch_size=self.batch_size,verbose=self.verbose)
         self.histories = history
+
+
+        # save the model
+        self.msg_svc.INFO(" SAVE MODEL")
+        self.save_model(self.useLWTNN)
+
 
         # evaluate the model
         self.msg_svc.DEBUG("DL :     + Evaluate the model: ")
@@ -264,9 +249,9 @@ class DeepLearning(object):
         test_predictions  = self.predict(X_test)
 
         # Make ROC curve from test sample
-        fpr,tpr,_ = roc_curve( Y_test, test_predictions )
-        self.fpr.append(fpr)
-        self.tpr.append(tpr)
+#        fpr,tpr,_ = roc_curve( Y_test, test_predictions )
+#        self.fpr.append(fpr)
+#        self.tpr.append(tpr)
 
         # -- store test/train data from each k-fold as histograms (to compare later)
         h_tests  = dict( (n,ROOT.TH1D("test_"+n,"test_"+n,10,0,1)) for n,v in self.targets.iteritems() )
@@ -274,8 +259,8 @@ class DeepLearning(object):
 
         # fill histogram for each target
         for (n,v) in self.targets.iteritems():
-            [h_tests[n].Fill(i)  for i in test_predictions[np.where(Ytest==v)]]
-            [h_trains[n].Fill(i) for i in train_predictions[np.where(Ytrain==v)]]
+            [h_tests[n].Fill(i)  for i in test_predictions[np.where(Y_test==v)]]
+            [h_trains[n].Fill(i) for i in train_predictions[np.where(Y_train==v)]]
 
         # Plot the predictions to compare test/train
         self.msg_svc.INFO("DL : Plot the train/test predictions")
@@ -304,15 +289,37 @@ class DeepLearning(object):
         @param variables2plot    If there are extra variables to plot, 
                                  that aren't features of the NN, include them here
         """
-        file    = uproot.open(self.hep_data)
-        data    = file[self.treename]
-        self.df = data.pandas.df( self.features+['target']+variables2plot )
+        self.msg_svc.INFO("DL : Load HEP data")
+        file = uproot.open(self.hep_data)
+        data = file[self.treename]
+        df   = data.pandas.df( self.features+['target']+variables2plot )
 
         self.metadata = file['metadata']   # names of samples, target values, etc.
 
+
+        # Make the dataset sizes equal (trim away some background)
+        fraction = 1
+        df = df[ (df.AK4_deepCSVb>=0) & (df.AK4_deepCSVbb>=0) & (df.AK4_deepCSVc>=0) & (df.AK4_deepCSVl>=0) ]
+
+        # resize arrays to equal lengths
+        target_dfs = []
+        for k,v in self.targets.iteritems():
+            tmp = df[ df.target==v ]
+            target_dfs.append(tmp)
+
+        # Find minimum size, shuffle entries
+        min_size = min( [k.shape[0] for k in target_dfs] )
+        for td,target_df in enumerate(target_dfs):
+            # shuffle entries and select first events up to 'min_size'
+            if target_df.shape[0]>min_size:
+                target_dfs[td] = target_dfs[td].sample(frac=1)[0:min_size]
+
+        self.df = pd.concat( target_dfs )     # re-combine into single dataframe
+        self.df = self.df.sample(frac=1)  # shuffle entries
+
         # set up plotter and save plots of the features and model architecture
         self.plotter.initialize(self.df,self.targets)
-        if self.runDiagnostics: self.diagnostics(preTraining=True)
+        if self.runDiagnostics: self.diagnostics(pre=True)
 
         return
 
@@ -383,20 +390,22 @@ class DeepLearning(object):
         return
 
 
-    def diagnostics(self,preTraining=False,postTraining=False):
+    def diagnostics(self,pre=False,post=False):
         """Diagnostic tests of the NN"""
 
         self.msg_svc.INFO("DL : Diagnostics")
 
         # Diagnostics before the training
-        if preTraining:
+        if pre:
             self.msg_svc.INFO("DL : -- pre-training")
-            self.plotter.features()                   # compare features for different targets
-            self.plotter.feature_correlations()       # correlations of features
-            self.plotter.model(self.model,self.model_name) # Keras plot of the model architecture
+            print ' features '
+            self.plotter.features()          # compare features for different targets
+            print ' correlations '
+            self.plotter.correlation()       # correlations of features
+            self.plotter.separation()        # separatiions between classes for features
 
         # post training/testing
-        if postTraining:
+        if post:
             self.msg_svc.INFO("DL : -- post-training :: ROC")
             self.plotter.ROC(self.fpr,self.tpr,self.accuracy)  # ROC curve for signal vs background
             self.msg_svc.INFO("DL : -- post-training :: History")

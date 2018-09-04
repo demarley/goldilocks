@@ -88,7 +88,7 @@ def getSeparation(sig,bkg):
     return separation
 
 
-def GetSeparation2D( S, B ):
+def getSeparation2D( S, B ):
     """Compare 2D arrays of S and B -- need same dimensions"""
     separation = 0
 

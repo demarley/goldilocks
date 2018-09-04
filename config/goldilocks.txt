@@ -1,12 +1,12 @@
 framework keras
 runTraining True
 runInference False
-hep_data /data/demarley/susy/data/14Aug2018/data.root
+hep_data /data/demarley/susy/data/29Aug2018/data.root
 treename features
 output_path /data/demarley/susy/data/DNN
-nHiddenLayers 4
-nNodes 50
-epochs 40
+nHiddenLayers 3
+nNodes 30
+epochs 20
 batch_size 64
 loss categorical_crossentropy
 activation relu,sigmoid
@@ -17,6 +17,8 @@ output_dim 4
 nEntries -1
 verbose INFO
 # deepAK8
-features AK8_deepAK8_0,AK8_deepAK8_1,AK8_deepAK8_2,AK8_deepAK8_3,AK8_deepAK8_4,AK8_deepAK8_5,AK8_deepAK8_6,AK8_deepAK8_7,AK8_deepAK8_8,AK8_deepAK8_9,AK8_deepAK8_10,AK8_deepAK8_11,AK8_deepAK8_12,AK8_deepAK8_13,AK8_deepAK8_14,AK8_deepAK8_15,AK8AK4_mass,AK8AK4_deltaR,AK4_deepCSVb,AK4_deepCSVbb,AK4_deepCSVc,AK4_deepCSVcc,AK4_deepCSVl,AK4_deepFlavorb,AK4_deepFlavorbb,AK4_deepFlavorc,AK4_deepFlavoruds,AK4_deepFlavorg,AK4_deepFlavorlepb
+features AK8_deepAK8_0,AK8_deepAK8_1,AK8_deepAK8_2,AK8_deepAK8_3,AK8_deepAK8_4,AK8_deepAK8_5,AK8_deepAK8_6,AK8_deepAK8_7,AK8_deepAK8_8,AK8_deepAK8_9,AK8_deepAK8_10,AK8_deepAK8_11,AK8_deepAK8_12,AK8_deepAK8_13,AK8_deepAK8_14,AK8_deepAK8_15,AK8AK4_mass,AK8AK4_deltaR,AK4_deepCSVb,AK4_deepCSVbb,AK4_deepCSVc,AK4_deepCSVl
+# AK4_deepCSVcc
+# AK4_deepFlavorb,AK4_deepFlavorbb,AK4_deepFlavorc,AK4_deepFlavoruds,AK4_deepFlavorg,AK4_deepFlavorlepb
 # AK8substructure
 #features AK8_pt,AK8_SDmass,AK8_tau1,AK8_tau2,AK8_tau3,AK8_tau21,AK8_tau32,AK8_subjet0_bdisc,AK8_subjet0_pTrel,AK8_subjet1_bdisc,AK8_subjet1_pTrel,AK8AK4_mass,AK8AK4_deltaR,AK4_deepCSVb,AK4_deepCSVbb,AK4_deepCSVc,AK4_deepCSVcc,AK4_deepCSVl,AK4_deepFlavorb,AK4_deepFlavorbb,AK4_deepFlavorc,AK4_deepFlavoruds,AK4_deepFlavorg,AK4_deepFlavorlepb

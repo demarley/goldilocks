@@ -47,6 +47,11 @@ class Config(object):
     def getConfiguration(self):
         """Read the configuration file and set arguments"""
         for line in self.file:
+            if line.startswith("#"): continue          # skip lines with comments
+            if "#" in line: 
+                line = line.split("#")[0]              # ignore comments on a given line
+
+            line = line.rstrip(' ')                    # remove extra whitespace
             param,value = line.split(' ')
             value = value.rstrip('\n')
 
