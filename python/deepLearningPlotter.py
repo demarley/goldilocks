@@ -81,7 +81,7 @@ class DeepLearningPlotter(object):
         self.CMSlabelStatus = "Simulation Internal"
 
 
-    def initialize(self,dataframe,targets={},scaled_inputs=False):
+    def initialize(self,dataframe,targets={},scaled_inputs=False,get_separations=True):
         """
         Set parameters of class to make plots
 
@@ -107,7 +107,7 @@ class DeepLearningPlotter(object):
         # (to calculate separation between classes)
         self.target_pairs = list(itertools.combinations(targets.keys(),2))
 
-        self.getSeparations()
+#        if get_separations: self.getSeparations()
 
         return
 
@@ -120,9 +120,11 @@ class DeepLearningPlotter(object):
         """
         self.msg_svc.INFO("DL : Plotting features.")
 
+        print self.listOfFeatures
+        print self.listOfFeaturePairs
+
         # plot the features and calculate significance
         for hi,feature in enumerate(self.listOfFeatures):
-            print feature
             hist = Histogram1D()
 
             hist.normed  = True
@@ -153,9 +155,9 @@ class DeepLearningPlotter(object):
                 name_a = pair[0] 
                 name_b = pair[1]
 
-                separation = self.separations[feature]['-'.join(pair)]
-                hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(name_a,name_b,separation),
-                                    coords=[0.03,(0.97-0.08*n_extra_text)])
+#                separation = self.separations[feature]['-'.join(pair)]
+#                hist.extra_text.Add("Sep({0},{1}) = {2:.2f}".format(name_a,name_b,separation),
+#                                    coords=[0.03,(0.97-0.08*n_extra_text)])
                 n_extra_text+=1
 
             p = hist.execute()
@@ -163,15 +165,11 @@ class DeepLearningPlotter(object):
 
 
         # plot the 2D features
-        print ' 2 D '
         for hi,featurepairs in enumerate(self.listOfFeaturePairs):
-            print featurepairs
-
             xfeature = featurepairs[0]
             yfeature = featurepairs[1]
 
             for target in self.targets:
-                print target.name
                 hist = Histogram2D()
 
                 xbins = self.variable_labels[xfeature].binning
@@ -338,77 +336,70 @@ class DeepLearningPlotter(object):
         To save on memory, pass this TH1s directly, rather than raw values.
         """
         self.msg_svc.INFO("DL : Plotting DNN prediction. ")
-        binning = [bb*0.1 for bb in range(11)]
 
         # Make a plot for each target value (e.g., QCD prediction to be QCD; Top prediction to be QCD, etc)
-        hist = Histogram1D()
+        for ii,tt in enumerate(self.targets):
+            hist = Histogram1D()
 
-        hist.normed  = True  # compare shape differences (likely don't have the same event yield)
-        hist.format  = self.image_format
-        hist.saveAs  = "{0}/hist_DNN_prediction_{1}".format(self.output_dir,self.date)
-        hist.binning = binning
-        hist.stacked = False
-        hist.x_label = "Prediction"
-        hist.y_label = "A.U."
-        hist.CMSlabel = 'outer'
-        hist.CMSlabelStatus   = self.CMSlabelStatus
-        hist.legend['fontsize'] = 18
+            hist.normed  = True  # compare shape differences (likely don't have the same event yield)
+            hist.format  = self.image_format
+            hist.saveAs  = "{0}/hist_DNN_prediction_{1}_{2}".format(self.output_dir,tt.name,self.date)
+            hist.stacked = False
+            hist.x_label = "Prediction"
+            hist.y_label = "A.U."
+            hist.CMSlabel = 'outer'
+            hist.CMSlabelStatus   = self.CMSlabelStatus
+            hist.legend['fontsize'] = 18
 
-        hist.ratio.value  = "ratio"
-        hist.ratio.ylabel = "Train/Test"
+            hist.ratio.value  = "ratio"
+            hist.ratio.ylabel = "Train/Test"
 
-        hist.initialize()
+            hist.initialize()
 
-        json_data = {}
-        for t,target in enumerate(self.targets):
+            json_data = {}
+            for t,target in enumerate(self.targets):
 
-            target_value = target.target_value  # arrays for multiclassification 
+                target_value = target.target_value  # arrays for multiclassification 
 
-            train_t = train_data[target.name]
-            test_t  = test_data[target.name]
+                train_t = train_data[tt.name][target.name]
+                test_t  = test_data[tt.name][target.name]
 
-            train_kwargs = {"draw_type":"step","edgecolor":target.color,
-                            "label":target.label+" Train"}
-            test_kwargs  = {"draw_type":"stepfilled","edgecolor":target.color,
-                            "color":target.color,"linewidth":0,"alpha":0.5,
-                            "label":target.label+" Test"}
+                train_kwargs = {"draw_type":"step","edgecolor":target.color,
+                                "label":target.label+" Train"}
+                test_kwargs  = {"draw_type":"stepfilled","edgecolor":target.color,
+                                "color":target.color,"linewidth":0,"alpha":0.5,
+                                "label":target.label+" Test"}
 
-            hist.Add(train_t,name=target.name+'_train',**train_kwargs) # Training
-            hist.Add(test_t,name=target.name+'_test',**test_kwargs)    # Testing
+                hist.Add(train_t,name=target.name+'_train',**train_kwargs) # Training
+                hist.Add(test_t,name=target.name+'_test',**test_kwargs)    # Testing
 
-            hist.ratio.Add(numerator=target.name+'_train',denominator=target.name+'_test')
+                hist.ratio.Add(numerator=target.name+'_train',denominator=target.name+'_test')
 
-            ## Save data to JSON file
-            if isinstance(train_t,ROOT.TH1):
+                ## Save data to JSON file
                 d_tr = hpt.hist2list(train_t)
                 d_te = hpt.hist2list(test_t)
                 json_data[target.name+"_train"] = {"binning":d_tr.bins.tolist(),
                                                    "content":d_tr.content.tolist()}
                 json_data[target.name+"_test"]  = {"binning":d_te.bins.tolist(),
                                                    "content":d_te.content.tolist()}
-            else:
-                json_data[target.name+"_train"] = {"binning":hist.binning,
-                                                   "content":train_t}
-                json_data[target.name+"_test"]  = {"binning":hist.binning,
-                                                   "content":test_t}
 
-        # calculate separation between predictions
-        for t,target in enumerate(self.target_pairs):
-            data_a = json_data[ target[0]+"_test" ]["content"]
-            data_b = json_data[ target[1]+"_test" ]["content"]
+            # calculate separation between predictions
+            for t,target in enumerate(self.target_pairs):
+                data_a = json_data[ target[0]+"_test" ]["content"]
+                data_b = json_data[ target[1]+"_test" ]["content"]
 
-            separation = util.getSeparation(data_a,data_b)
-            hist.extra_text.Add("Test Sep({0},{1}) = {2:.2f}".format(target[0],target[1],separation),
-                                coords=[0.03,(0.97-0.08*t)])
+                separation = util.getSeparation(data_a,data_b)
+                hist.extra_text.Add("Test Sep({0},{1}) = {2:.2f}".format(target[0],target[1],separation),
+                                    coords=[0.03,(0.97-0.08*t)])
 
-            json_data[ '-'.join(target)+"_test" ] = {"separation":separation}
+                json_data[ '-'.join(target)+"_test" ] = {"separation":separation}
 
-        p = hist.execute()
-        hist.savefig()
+            p = hist.execute()
+            hist.savefig()
 
-        # save results to JSON file (just histogram values & bins) to re-make plots
-        with open("{0}.json".format(hist.saveAs), 'w') as outfile:
-            json.dump(json_data, outfile)
+            # save results to JSON file (just histogram values & bins) to re-make plots
+            with open("{0}.json".format(hist.saveAs), 'w') as outfile:
+                json.dump(json_data, outfile)
 
         return
 

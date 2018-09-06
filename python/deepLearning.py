@@ -1,4 +1,3 @@
-
 """
 Created:        11 November  2016
 Last Updated:   15 February  2018
@@ -62,15 +61,11 @@ class DeepLearning(object):
 
         ## Handling NN objects and data -- set in the class
         self.df  = None          # dataframe containing physics information
-        self.fpr = None          # ROC curve: false positive rate
-        self.tpr = None          # ROC curve: true positive rate
-        self.model = None      # Keras model
+        self.fpr = {}            # ROC curve: false positive rate
+        self.tpr = {}            # ROC curve: true positive rate
+        self.model = None        # Keras model
         self.accuracy  = {'mean':0,'std':0}   # k-fold accuracies
         self.histories = []           # model history (for ecah k-fold)
-        self.train_data = {}          # set later
-        self.test_data  = {}          # set later
-        self.train_predictions = []   # set later
-        self.test_predictions  = []   # set later
 
         ## NN architecture & parameters -- set by config file
         self.treename   = 'features'    # Name of TTree to access in ROOT file (via uproot)
@@ -112,11 +107,9 @@ class DeepLearning(object):
         # initialize empty dictionaries, lists
         self.test_data  = {'X':[],'Y':[]}
         self.train_data = {'X':[],'Y':[]}
-        self.test_predictions  = []
-        self.train_predictions = []
 
-        self.fpr = []  # false positive rate
-        self.tpr = []  # true positive rate
+        self.fpr = {}  # false positive rate
+        self.tpr = {}  # true positive rate
         self.histories  = []
         if not self.model_name:  self.model_name = self.hep_data.split('/')[-1].split('.')[0]+'_'+self.date
 
@@ -168,11 +161,11 @@ class DeepLearning(object):
         """
         Run inference of the NN model
         User responsible for diagnostics if not doing training: 
-        -> save all predictions (& labels) using 'self.test_predictions'
+        -> save all predictions
            then call individual functions:
-              plot_features()   -> compare features of the inputs
-              plot_prediction() -> compare output prediction (works for classification)
-              plot_ROC()        -> signal vs background efficiency (need self.fpr, self.tpr filled)
+              features()   -> compare features of the inputs
+              prediction() -> compare output prediction (works for classification)
+              ROC()        -> signal vs background efficiency (need self.fpr, self.tpr filled)
         """
         self.load_model(self.useLWTNN)
 
@@ -229,7 +222,7 @@ class DeepLearning(object):
         Y_train = to_categorical(Y_train, num_classes=num_classes)
         Y_test  = to_categorical(Y_test, num_classes=num_classes)
 
-        ## Fit the model to training data & save the history
+        ## Fit the model to training data & save the history (with validation!)
         callbacks_list = [] if not self.earlystopping else [EarlyStopping(**self.earlystopping)]
         history = self.model.fit(X_train,Y_train,epochs=self.epochs,validation_split=0.25,\
                                  callbacks=callbacks_list,batch_size=self.batch_size,verbose=self.verbose)
@@ -240,28 +233,46 @@ class DeepLearning(object):
         self.msg_svc.INFO(" SAVE MODEL")
         self.save_model(self.useLWTNN)
 
-
         # evaluate the model
         self.msg_svc.DEBUG("DL :     + Evaluate the model: ")
-        train_predictions = self.predict(X_train)
+        train_predictions = self.predict(X_train)              # predictions from training sample
+        test_predictions  = self.predict(X_test)               # predictions from testing sample
 
-        # Evaluate test sample
-        test_predictions  = self.predict(X_test)
+        # -- store test/train prediction
+        #    Need predictions for each class for each sample 
+        #    (e.g., for top sample, what is the qcd prediction? For qcd sample, what is the qcd prediction? etc.)
+        h_tests  = {}
+        h_trains = {}
+        target_names = self.targets.keys()
+        for n in target_names:
+            # sample being considered
+            h_tests[n] = {}
+            h_trains[n] = {}
+            for m in target_names:
+                # different classes
+                h_tests[n][m]  = ROOT.TH1D("test_{0}-{1}".format(n,m),"test_{0}-{1}".format(n,m),10,0,1)
+                h_trains[n][m] = ROOT.TH1D("train_{0}-{1}".format(n,m),"train_{0}-{1}".format(n,m),10,0,1)
 
-        # Make ROC curve from test sample
-#        fpr,tpr,_ = roc_curve( Y_test, test_predictions )
-#        self.fpr.append(fpr)
-#        self.tpr.append(tpr)
+        # Predictions and ROC curves for each sample
+        for i,(n,v) in enumerate(self.targets.iteritems()):
+            # Make ROC curve from test sample
+            fpr,tpr,_ = roc_curve( Y_test[:,i], test_predictions[:,i] )
+            self.fpr[n] = fpr
+            self.tpr[n] = tpr
 
-        # -- store test/train data from each k-fold as histograms (to compare later)
-        h_tests  = dict( (n,ROOT.TH1D("test_"+n,"test_"+n,10,0,1)) for n,v in self.targets.iteritems() )
-        h_trains = dict( (n,ROOT.TH1D("train_"+n,"train_"+n,10,0,1)) for n,v in self.targets.iteritems() )
+            # fill histograms of predictions for different classes for this sample
+            category = np.array([0. for _ in range(num_classes)])
+            category[v] = 1.
 
-        # fill histogram for each target
-        for (n,v) in self.targets.iteritems():
-            [h_tests[n].Fill(i)  for i in test_predictions[np.where(Y_test==v)]]
-            [h_trains[n].Fill(i) for i in train_predictions[np.where(Y_train==v)]]
+            test_preds  = test_predictions[np.where(np.prod(Y_test==category, axis=-1))]    # array for each class prediction in single sample
+            train_preds = train_predictions[np.where(np.prod(Y_train==category, axis=-1))]  # array for each class prediction in single sample
 
+            for m,val in self.targets.iteritems():
+                for j in test_preds[:,val]:
+                    h_tests[n][m].Fill(j)
+                for j in train_preds[:,val]:
+                    h_trains[n][m].Fill(j)
+ 
         # Plot the predictions to compare test/train
         self.msg_svc.INFO("DL : Plot the train/test predictions")
         self.plotter.prediction(h_trains,h_tests)   # compare DNN prediction for different targets
@@ -318,7 +329,7 @@ class DeepLearning(object):
         self.df = self.df.sample(frac=1)  # shuffle entries
 
         # set up plotter and save plots of the features and model architecture
-        self.plotter.initialize(self.df,self.targets)
+        self.plotter.initialize(self.df,self.targets,get_separations=self.runDiagnostics)
         if self.runDiagnostics: self.diagnostics(pre=True)
 
         return
@@ -402,14 +413,14 @@ class DeepLearning(object):
             self.plotter.features()          # compare features for different targets
             print ' correlations '
             self.plotter.correlation()       # correlations of features
-            self.plotter.separation()        # separatiions between classes for features
+            #self.plotter.separation()        # separatiions between classes for features
 
         # post training/testing
         if post:
             self.msg_svc.INFO("DL : -- post-training :: ROC")
             self.plotter.ROC(self.fpr,self.tpr,self.accuracy)  # ROC curve for signal vs background
             self.msg_svc.INFO("DL : -- post-training :: History")
-            self.plotter.loss_history(self.histories) # loss as a function of epoch
+            self.plotter.history(self.histories) # loss as a function of epoch
 
         return
 
