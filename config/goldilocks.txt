@@ -1,7 +1,7 @@
 framework keras
 runTraining True
 runInference False
-hep_data /data/demarley/susy/data/29Aug2018/data.root
+hep_data /data/demarley/susy/data/29Aug2018/data_tmp.root
 treename features
 output_path /data/demarley/susy/data/DNN
 nHiddenLayers 4

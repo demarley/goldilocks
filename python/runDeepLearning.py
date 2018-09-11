@@ -16,27 +16,34 @@ $ python python/runDeepLearning.py config/mlconfig.txt
  {"none",0},    // :: NONE = QCD (background)
  {"QB",1},      // :: QB-Q = Signal AK8(QB) + AK4(Q)
  {"W",2},       // :: QQ-B = Signal AK8(W)  + AK4(B)
+ {"other",3"    // :: QB/QQ+AK4 = Background ("signal-like")
 """
 import os
 import sys
 import json
-import util
-from config import Config
 from collections import Counter
 from time import strftime,localtime
-from deepLearning import DeepLearning
+
+
+import plotlabels as plb
+cwd = os.getcwd()
+hpd = cwd.rstrip("goldilocks")+"/asimov/python/"
+if hpd not in sys.path:
+    sys.path.insert(0,hpd)
+
+import util
+from training import Training
+from config import Config
 
 
 print
 print " ------------------------------ "
-print " *  Deep Learning with Keras  * "
+print " *  Goldilocks Deep Learning  * "
 print " ------------------------------ "
 print
 
-
-date   = strftime("%d%b", localtime())
-cmaDir = os.path.expandvars('$CYMINIANADIR')
-vb     = util.VERBOSE()
+date = strftime("%d%b%Y-%H%M")
+vb   = util.VERBOSE()
 
 ## Set configuration options ##
 config = Config(sys.argv[1])
@@ -50,45 +57,15 @@ if not config.runTraining and not config.runInference:
     sys.exit(1)
 
 
-## Setup features
-NN_parameters = ['epochs','batch_size','loss','optimizer','metrics','activations',
-                 'nHiddenLayers','nNodes','input_dim','kfold_splits']
-
-try:
-    featureKeys = json.load(open('config/features.json'))
-except IOError:
-    featureKeys = {}
-
-featureKey = -1
-for key in featureKeys.keys():
-    if Counter(featureKeys[key])==Counter(config.features):
-        featureKey = int(key)
-        break
-if featureKey<0:
-    keys = featureKeys.keys()
-    featureKey = max([int(i) for i in keys])+1 if keys else 0
-    featureKeys[str(featureKey)] = config.features
-    vb.INFO("RUN :  New features for NN ")
-    with open('config/features.json','w') as outfile:
-        json.dump(featureKeys,outfile)
-
-## Set output directory
-output_dir  = "nHiddenLayers{0}_".format(config.nHiddenLayers)
-output_dir += "nNodes{0}_".format('-'.join(config.nNodes))
-output_dir += "epoch{0}_".format(config.epochs)
-output_dir += "batch{0}_".format(config.batch_size)
-output_dir += "kfold{0}_".format(config.kfold_splits)
-output_dir += "activation-{0}_".format(config.activation.replace(',','-'))
-output_dir += "featureKey{0}".format(featureKey)
-hep_data_name = config.hep_data.split('/')[-1].split('.')[0]
-
-
 ## Setup Deep Learning class
-dnn = DeepLearning()
+dnn = Training()
+
+dnn.variable_labels = plb.variable_labels()
+dnn.sample_labels   = plb.sample_labels()
 
 dnn.hep_data   = config.hep_data
 dnn.model_name = config.dnn_data
-dnn.verbose_level = config.verbose_level
+dnn.msg_svc    = vb
 dnn.treename   = config.treename
 dnn.useLWTNN   = True
 dnn.dnn_name   = "dnn"
@@ -103,56 +80,33 @@ dnn.epochs     = config.epochs
 dnn.optimizer  = config.optimizer
 dnn.input_dim  = len(config.features)
 dnn.batch_size = config.batch_size
-dnn.activations   = config.activation.split(',')
-dnn.kfold_splits  = config.kfold_splits
-dnn.nHiddenLayers = config.nHiddenLayers
-dnn.earlystopping = {'monitor':'loss','min_delta':0.0001,'patience':10,'mode':'auto'}
-dnn.runDiagnostics = False
+dnn.activations    = config.activation.split(',')
+dnn.nHiddenLayers  = config.nHiddenLayers
+dnn.earlystopping  = {'monitor':'loss','min_delta':0.0001,'patience':10,'mode':'auto'}
+dnn.runDiagnostics = True
+dnn.classes = {"multijet":0,"BQ":1,"W":2,"ttbckg":3}
 
-## inference/training
-output = "{0}/{1}/{2}".format( config.output_path,output_dir,hep_data_name)
-if config.runTraining:
-    output += "/training/"
-else:
-    output += "/inference/"
+## training
+hep_data_name = config.hep_data.split('/')[-1].split('.')[0]
+output = "{0}/{1}".format( config.output_path,hep_data_name)
+output += "/training-{0}/".format(date)
 dnn.output_dir = output
 
+vb.INFO("RUN :  Saving output to {0}".format(output))
 if not os.path.isdir(output):
     vb.WARNING("RUN : '{0}' does not exist ".format(output))
     vb.WARNING("RUN :       Creating the directory. ")
     os.system( 'mkdir -p {0}'.format(output) )
-else:
-    vb.INFO("RUN :  Saving output to {0}".format(output))
 
-## load hep data (physics data -- .json file). Always need this for testing/training
-dnn.features = config.features
+## -- Copy the configuration file to the output directory
+os.system("cp {0} {1}".format(sys.argv[1],output))
+
 
 ## Setup
 dnn.initialize()
 
-
-if config.runTraining:
-    vb.INFO("RUN :  > Build the NN")
-    # set properties of the NN
-    dnn.training()
-
-    ## -- Save information on the NN to a text file to reference later
-    outputFile = open(dnn.output_dir+'/ABOUT.txt','w')
-    outputFile.write(" * NN Setup * \n")
-    outputFile.write(" NN Summary: \n")
-    outputFile.write("\n NN parameters: \n")
-
-    for NN_parameter in NN_parameters:
-        outputFile.write( NN_parameter+": "+str(getattr(dnn,NN_parameter))+"\n" )
-    outputFile.write( "\n NN Features: \n" )
-    for feature in dnn.features:
-        outputFile.write("  >> "+feature+"\n" )
-    outputFile.close()
-
-
-if config.runInference:
-    vb.INFO("RUN :  > Load NN model from disk")
-    dnn.inference()
-
+dnn.load_data(['target'])   # load HEP data (add 'target' branch to dataframe)
+dnn.preprocess_data()       # equal statistics for each class
+dnn.training()              # build and train the model!
 
 ## END ##

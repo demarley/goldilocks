@@ -13,7 +13,8 @@ try:
     import Analysis.hepPlotter.tools as hpt
 except KeyError:
     cwd = os.getcwd()
-    hpd = cwd.rstrip("leopard/python")+"/hepPlotter/python/"
+    print cwd
+    hpd = cwd.rstrip("goldilocks")+"/hepPlotter/python/"
     if hpd not in sys.path:
         sys.path.insert(0,hpd)
     import tools as hpt
