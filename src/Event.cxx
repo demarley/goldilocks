@@ -571,10 +571,55 @@ void Event::finalize(){
     delete m_eeBadScFilter;
     delete m_globalTightHalo2016Filter;
     delete m_goodVerticesFilter;
+    delete m_noBadMuonsFilter;
+    delete m_badMuonsFilter;
+    delete m_duplicateMuonsFilter;
 
     cma::DEBUG("EVENT : Finalize -- Clear Ljets");
+    delete m_ak8puppiJetsLVec;
+    delete m_ak8puppiSubJetsLVec;
+    delete m_ak8puppiTau1;
+    delete m_ak8puppiTau2;
+    delete m_ak8puppiTau3;
+    delete m_ak8puppiSoftDropMass;
+    delete m_ak8puppiSubJetsBdisc;
+    delete m_ak8puppiSubJetMult;
+    delete m_ak8puppiSubjetPtD;
+    delete m_ak8puppiSubjetAxis1;
+    delete m_ak8puppiSubjetAxis2;
+    delete m_ak8DeepAK8LVec;
+    delete m_ak8DeepAK8top;
+    delete m_ak8DeepAK8W;
+    delete m_ak8DeepAK8Z;
+    delete m_ak8DeepAK8Zbb;
+    delete m_ak8DeepAK8Hbb;
+    delete m_ak8DeepAK8H4q;
+    delete m_ak8DeepAK8;
 
     cma::DEBUG("EVENT : Finalize -- Clear Jets");
+    delete m_NJetsISR;
+    delete m_ak4LVec;
+    delete m_ak4Flavor;
+    delete m_ak4Charge;
+    delete m_ak4looseJetID;
+    delete m_ak4tightJetID;
+    delete m_ak4tightlepvetoJetID;
+    delete m_ak4deepCSV_b;
+    delete m_ak4deepCSV_bb;
+    delete m_ak4deepCSV_c;
+    delete m_ak4deepCSV_cc;
+    delete m_ak4deepCSV_l;
+    delete m_ak4deepFlavor_b;
+    delete m_ak4deepFlavor_bb;
+    delete m_ak4deepFlavor_lepb;
+    delete m_ak4deepFlavor_c;
+    delete m_ak4deepFlavor_uds;
+    delete m_ak4deepFlavor_g;
+    delete m_ak4qgLikelihood;
+    delete m_ak4qgPtD;
+    delete m_ak4qgAxis1;
+    delete m_ak4qgAxis2;
+    delete m_ak4qgMult;
 
     if (m_isMC){
       cma::DEBUG("EVENT : Finalize -- Clear MC");
@@ -586,6 +631,7 @@ void Event::finalize(){
       delete m_genDecayMomIdxVec;
       delete m_genDecayMomRefVec;
       delete m_genDecayPdgIdVec;
+      delete m_genMatched;
     } // end isMC
 
     return;
