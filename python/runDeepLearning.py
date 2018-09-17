@@ -101,12 +101,16 @@ if not os.path.isdir(output):
 ## -- Copy the configuration file to the output directory
 os.system("cp {0} {1}".format(sys.argv[1],output))
 
+## -- Slice rows of the dataframe (remove from training)
+##    list of strings with arguments separated by a space
+slices = ['AK4_deepCSVb >= 0','AK4_deepCSVbb >= 0',
+          'AK4_deepCSVc >= 0','AK4_deepCSVl >= 0']   # want all AK4 to have 'good' b-tagging scores
 
 ## Setup
 dnn.initialize()
 
 dnn.load_data(['target'])   # load HEP data (add 'target' branch to dataframe)
-dnn.preprocess_data()       # equal statistics for each class
+dnn.preprocess_data(slices) # equal statistics for each class & remove bad rows
 dnn.training()              # build and train the model!
 
 ## END ##

@@ -79,8 +79,8 @@ def variable_labels():
     variables['AK4_deepFlavorg']    = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepFlavor(g)')
     variables['AK4_deepFlavorlepb'] = Variable(binning=hpt.hist1d(10,0,1),label=r'AK4 DeepFlavor(lepb)')
 
-    variables['AK8AK4_mass']   = Variable(binning=hpt.hist1d(50,0.,5000.), label=r'AK8+AK4 '+_mass)
-    variables['AK8AK4_deltaR'] = Variable(binning=hpt.hist1d(10,0.,5.),    label=r'$\Delta$R(AK8,AK4)')
+    variables['AK8AK4_mass']   = Variable(binning=hpt.hist1d(40,0.,400.), label=r'AK8+AK4 '+_mass)
+    variables['AK8AK4_deltaR'] = Variable(binning=hpt.hist1d(10,0.,5.),   label=r'$\Delta$R(AK8,AK4)')
 
     return variables
 
