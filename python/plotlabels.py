@@ -100,7 +100,7 @@ def sample_labels():
     samples['bckg']   = Sample(label='Bckg',color='r')
 
     ttbar = r't$\bar{\text{t}}$'
-    samples['multijet'] = Sample(label=r'Multi-jet',  color='purple')
+    samples['multijet'] = Sample(label=r'Multijet',   color='purple')
     samples['BQ']       = Sample(label=ttbar+' (QB)', color='red')
     samples['W']        = Sample(label=ttbar+' (W)',  color='blue')
     samples['ttbckg']   = Sample(label=ttbar+' bckg.',color='green')
