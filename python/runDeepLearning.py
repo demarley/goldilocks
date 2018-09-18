@@ -103,8 +103,10 @@ os.system("cp {0} {1}".format(sys.argv[1],output))
 
 ## -- Slice rows of the dataframe (remove from training)
 ##    list of strings with arguments separated by a space
-slices = ['AK4_deepCSVb >= 0','AK4_deepCSVbb >= 0',
-          'AK4_deepCSVc >= 0','AK4_deepCSVl >= 0']   # want all AK4 to have 'good' b-tagging scores
+#slices = ['AK4_deepCSVb >= 0','AK4_deepCSVbb >= 0',
+#          'AK4_deepCSVc >= 0','AK4_deepCSVl >= 0']   # want all AK4 to have 'good' b-tagging scores
+slices = ['AK4_deepFlavorb >= 0','AK4_deepFlavorbb >= 0','AK4_deepFlavorc >= 0',
+          'AK4_deepFlavoruds >= 0','AK4_deepFlavorg >= 0','AK4_deepFlavorlepb >= 0'] # want all AK4 to have 'good' b-tagging scores
 
 ## Setup
 dnn.initialize()
