@@ -111,6 +111,6 @@ dnn.initialize()
 
 dnn.load_data(['target'])   # load HEP data (add 'target' branch to dataframe)
 dnn.preprocess_data(slices) # equal statistics for each class & remove bad rows
-dnn.training()              # build and train the model!
+dnn.train()                 # build and train the model!
 
 ## END ##
