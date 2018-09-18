@@ -108,7 +108,6 @@ slices = ['AK4_deepCSVb >= 0','AK4_deepCSVbb >= 0',
 
 ## Setup
 dnn.initialize()
-
 dnn.load_data(['target'])   # load HEP data (add 'target' branch to dataframe)
 dnn.preprocess_data(slices) # equal statistics for each class & remove bad rows
 dnn.train()                 # build and train the model!
