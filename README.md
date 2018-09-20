@@ -18,7 +18,7 @@ The goldilocks framework has been developed in the CMSSW release `CMSSW_8_0_28_p
 cmsrel CMSSW_8_0_28_patch1
 cd CMSSW_8_0_28_patch1/src/
 cmsenv
-git cms-init
+git cms-init --upstream-only
 
 ## Lightweight NN (for running Keras models in C++)
 mkdir lwtnn
