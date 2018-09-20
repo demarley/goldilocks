@@ -4,7 +4,7 @@ hep_data /data/demarley/susy/data/29Aug2018/data.root
 treename features
 output_path /data/demarley/susy/data/DNN
 nHiddenLayers 5
-nNodes 40
+nNodes 50
 epochs 30
 batch_size 128
 loss categorical_crossentropy
@@ -16,7 +16,7 @@ output_dim 4
 nEntries -1
 verbose INFO
 # deepAK8
-features AK8_deepAK8_3,AK8_deepAK8_4,AK8_deepAK8_5,AK8_deepAK8_6,AK8_deepAK8_7,AK8_deepAK8_8,AK8_deepAK8_9,AK8_deepAK8_10,AK8_deepAK8_11,AK8_deepAK8_12,AK8_deepAK8_13,AK8_deepAK8_14,AK8_deepAK8_15,AK8AK4_mass,AK4_deepCSVb,AK4_deepCSVbb,AK4_deepCSVc,AK4_deepCSVl
+features AK8_deepAK8_2,AK8_deepAK8_3,AK8_deepAK8_5,AK8_deepAK8_8,AK8_deepAK8_15,AK4_deepCSVb,AK4_deepCSVbb,AK4_deepCSVc,AK4_deepCSVl,AK8AK4_mass
 # AK8_deepAK8_0,AK8_deepAK8_1,AK8_deepAK8_2,AK8AK4_deltaR#AK4_deepCSVcc
 #features AK8_deepAK8_3,AK8_deepAK8_4,AK8_deepAK8_5,AK8_deepAK8_6,AK8_deepAK8_7,AK8_deepAK8_8,AK8_deepAK8_9,AK8_deepAK8_10,AK8_deepAK8_11,AK8_deepAK8_12,AK8_deepAK8_13,AK8_deepAK8_14,AK8_deepAK8_15,AK8AK4_mass,AK4_deepFlavorb,AK4_deepFlavorbb,AK4_deepFlavorc,AK4_deepFlavoruds,AK4_deepFlavorg,AK4_deepFlavorlepb
 # AK8substructure
