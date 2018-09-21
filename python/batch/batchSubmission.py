@@ -15,7 +15,7 @@ import os
 import sys
 import commands
 from collections import OrderedDict
-import Analysis.goldilocks.util as util
+import Analysis.goldilocks.utils as utils
 import batchScripts as bs
 
 
@@ -56,7 +56,7 @@ class BatchSubmission(object):
             self.unique_id_batch_path = "batch/{0}".format(self.unique_id_path)
 
 
-        self.vb = util.VERBOSE()
+        self.vb = utils.VERBOSE()
         self.vb.level = self.verbose_level
         self.vb.initialize()
 
