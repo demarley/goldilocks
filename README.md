@@ -1,9 +1,15 @@
 # Goldilocks
 The _not too boosted, not too resolved_ top tagger
 
-Tagging top quarks in the semi-merged regime (moderate pT).  
-Built for CMS analyses considering a wide pT-range of top quark decays:  
-A large-R jet (AK8) is paired with a small-R jet (AK4) to reconstruct the top quark.
+Tagging hadronically-decaying top quarks (t->qqb) in the semi-merged regime (moderate transverse momentum).  
+Built for CMS analyses considering a wide range of top quark decays:  
+> A large-R jet (AK8) is paired with a small-R jet (AK4) to reconstruct the top quark.
+> Goldilocks is applied to the AK8+AK4 system to classify it as one of the following categories:
+> - Signal "W" (AK8='qq'; AK4='b')
+> - Signal "QB" (AK8='qb'; AK4='q')
+> - Top Background "tt bckg" (AK8='qq' or 'qb'; AK4=incorrect jet)
+> - Multi-jet Background (AK8 and AK4 are chosen randomly from a non-top quark sample)
+
 
 The following describes steps necessary to setup the tagger in a CMSSW environment.  
 _The current setup does not use the Producer/Analyzer model, thus porting this to a "Standalone" setup outside of CMSSW should be straightforward_
