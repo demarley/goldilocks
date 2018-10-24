@@ -9,6 +9,9 @@ Built for CMS analyses considering a wide range of top quark decays:
 > - Signal "QB" (AK8='qb'; AK4='q')
 > - Top Background "tt bckg" (AK8='qq' or 'qb'; AK4=incorrect jet)
 > - Multi-jet Background (AK8 and AK4 are chosen randomly from a non-top quark sample)
+> 
+> The two signal categories are represented below, in this plot from [DP-2017/026](https://cds.cern.ch/record/2275225/files/DP2017_026.pdf).
+> <img src="config/goldilocks_signal.png" width="500">
 
 
 The following describes steps necessary to setup the tagger in a CMSSW environment.  
